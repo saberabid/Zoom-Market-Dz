@@ -1,0 +1,217 @@
+import React, { useState, useEffect } from 'react';
+import { X, ShoppingBag, Truck, ShieldCheck, Star, Plus, Minus, CheckCircle2, AlertTriangle, Images } from 'lucide-react';
+import { formatPrice } from '../utils/formatters';
+
+export default function ProductModal({ product, onClose, onAddToCart, onBuyNow }) {
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [quantity, setQuantity] = useState(1);
+  const [added, setAdded] = useState(false);
+
+  useEffect(() => {
+    setSelectedImageIndex(0);
+    setQuantity(1);
+  }, [product]);
+
+  if (!product) return null;
+
+  const isOutOfStock = product.inStock === false || product.stockQuantity === 0 || product.badge === 'Rupture de Stock';
+
+  // Get image list
+  const imageList = (product.images && product.images.length > 0)
+    ? product.images
+    : [product.image];
+
+  const currentImage = imageList[selectedImageIndex] || imageList[0];
+
+  const handleAdd = () => {
+    if (isOutOfStock) return;
+    onAddToCart(product, quantity);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1500);
+  };
+
+  const handleBuy = () => {
+    if (isOutOfStock) return;
+    onBuyNow(product, quantity);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-brand-navy/60 backdrop-blur-sm animate-fadeIn">
+      <div 
+        className="bg-white dark:bg-slate-900 rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 dark:border-slate-800 relative flex flex-col md:flex-row overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 z-20 bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white p-2 rounded-full transition-colors shadow-sm"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        {/* Left Image Section & Gallery */}
+        <div className="md:w-1/2 bg-slate-50 dark:bg-slate-850 p-6 flex flex-col justify-between relative">
+          {isOutOfStock ? (
+            <span className="absolute top-4 left-4 z-10 bg-rose-600 text-white text-xs font-extrabold px-3 py-1 rounded-lg uppercase tracking-wider shadow flex items-center gap-1">
+              <AlertTriangle className="w-3.5 h-3.5" />
+              Rupture de Stock
+            </span>
+          ) : (
+            product.badge && (
+              <span className="absolute top-4 left-4 z-10 bg-brand-orange text-white text-xs font-extrabold px-3 py-1 rounded-lg uppercase tracking-wider shadow">
+                {product.badge}
+              </span>
+            )
+          )}
+
+          {/* Main Selected Image */}
+          <div className="flex-1 flex items-center justify-center py-4">
+            <img
+              src={currentImage}
+              alt={product.title}
+              className={`max-h-72 w-full object-contain rounded-2xl transition-all duration-300 ${
+                isOutOfStock ? 'grayscale opacity-75' : 'hover:scale-105'
+              }`}
+            />
+          </div>
+
+          {/* Multiple Image Gallery Thumbnails */}
+          {imageList.length > 1 && (
+            <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-center gap-2.5 overflow-x-auto no-scrollbar">
+              {imageList.map((img, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setSelectedImageIndex(idx)}
+                  className={`w-14 h-14 rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 ${
+                    selectedImageIndex === idx
+                      ? 'border-brand-orange shadow-md scale-105'
+                      : 'border-slate-200 dark:border-slate-700 opacity-60 hover:opacity-100'
+                  }`}
+                >
+                  <img src={img} alt={`Vue ${idx + 1}`} className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Right Info Section */}
+        <div className="md:w-1/2 p-6 md:p-8 flex flex-col justify-between">
+          <div>
+            {/* Category & Rating */}
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <span className="text-xs font-bold text-brand-orange uppercase tracking-wider">
+                {product.category}
+              </span>
+              <div className="flex items-center gap-1 text-amber-500 text-xs font-bold">
+                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                <span>{product.rating || '4.8'}</span>
+                <span className="text-slate-400">({product.reviewsCount || 24} avis)</span>
+              </div>
+            </div>
+
+            {/* Title */}
+            <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white leading-snug">
+              {product.title}
+            </h2>
+
+            {/* Price */}
+            <div className="flex items-baseline gap-3 my-4">
+              <span className="text-2xl sm:text-3xl font-black text-brand-navy dark:text-white">
+                {formatPrice(product.price)}
+              </span>
+              {product.oldPrice && (
+                <span className="text-base text-slate-400 line-through font-semibold">
+                  {formatPrice(product.oldPrice)}
+                </span>
+              )}
+            </div>
+
+            {/* Description */}
+            <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed mb-6">
+              {product.description}
+            </p>
+
+            {/* Quantity Selector */}
+            {!isOutOfStock && (
+              <div className="flex items-center gap-4 mb-6">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Quantité:</span>
+                <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-xl p-1 border border-slate-200 dark:border-slate-700">
+                  <button
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300 transition-colors"
+                  >
+                    <Minus className="w-4 h-4" />
+                  </button>
+                  <span className="w-10 text-center font-bold text-sm text-slate-900 dark:text-white">
+                    {quantity}
+                  </span>
+                  <button
+                    onClick={() => setQuantity(quantity + 1)}
+                    className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Features / Stock */}
+            <div className="space-y-2 mb-6 text-xs font-medium text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 p-3.5 rounded-2xl">
+              {isOutOfStock ? (
+                <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-bold">
+                  <AlertTriangle className="w-4 h-4" />
+                  <span>Actuellement en Rupture de Stock</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-semibold">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>En stock ({product.stockQuantity ?? 10} pièces disponibles) - Expédition sous 24/48h</span>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2">
+                <Truck className="w-4 h-4 text-brand-orange" />
+                <span>Livraison disponible dans 69 Wilayas d'Algérie</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-brand-navy dark:text-slate-300" />
+                <span>Paiement sécurisé en espèces à la livraison</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Action CTAs */}
+          <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+            <button
+              onClick={handleAdd}
+              disabled={isOutOfStock}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm transition-all shadow-md active:scale-95 ${
+                isOutOfStock
+                  ? 'bg-slate-200 text-slate-400 dark:bg-slate-800 dark:text-slate-500 cursor-not-allowed shadow-none'
+                  : added
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              <ShoppingBag className="w-4 h-4 text-brand-orange" />
+              <span>{isOutOfStock ? 'Rupture de stock' : added ? 'Ajouté au panier !' : 'Ajouter au panier'}</span>
+            </button>
+
+            <button
+              onClick={handleBuy}
+              disabled={isOutOfStock}
+              className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm shadow-lg transition-all active:scale-95 ${
+                isOutOfStock
+                  ? 'bg-slate-300 text-slate-500 dark:bg-slate-800 dark:text-slate-600 cursor-not-allowed shadow-none'
+                  : 'bg-brand-orange hover:bg-brand-orange-hover text-white hover:shadow-glow'
+              }`}
+            >
+              Acheter maintenant
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

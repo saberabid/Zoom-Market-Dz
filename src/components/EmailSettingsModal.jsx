@@ -1,0 +1,180 @@
+import React, { useState } from 'react';
+import { X, Settings, Mail, Key, Phone, Check, Info } from 'lucide-react';
+
+export default function EmailSettingsModal({ isOpen, onClose, emailConfig, onSaveConfig }) {
+  const [serviceId, setServiceId] = useState(emailConfig.serviceId || '');
+  const [templateId, setTemplateId] = useState(emailConfig.templateId || '');
+  const [publicKey, setPublicKey] = useState(emailConfig.publicKey || '');
+  const [recipientEmail, setRecipientEmail] = useState(emailConfig.recipientEmail || 'marketdzzoom@gmail.com');
+  const [storePhone, setStorePhone] = useState(emailConfig.storePhone || '0550000000');
+  const [formspreeEndpoint, setFormspreeEndpoint] = useState(emailConfig.formspreeEndpoint || '');
+
+  const [saved, setSaved] = useState(false);
+
+  if (!isOpen) return null;
+
+  const handleSave = (e) => {
+    e.preventDefault();
+    onSaveConfig({
+      serviceId: serviceId.trim(),
+      templateId: templateId.trim(),
+      publicKey: publicKey.trim(),
+      recipientEmail: recipientEmail.trim(),
+      storePhone: storePhone.trim(),
+      formspreeEndpoint: formspreeEndpoint.trim()
+    });
+
+    setSaved(true);
+    setTimeout(() => {
+      setSaved(false);
+      onClose();
+    }, 1200);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-brand-navy/60 backdrop-blur-sm animate-fadeIn">
+      <div 
+        className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="p-5 bg-brand-navy text-white flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <Settings className="w-5 h-5 text-brand-orange" />
+            <div>
+              <h2 className="font-extrabold text-base">Paramètres Notifications & WhatsApp</h2>
+              <p className="text-xs text-slate-300">EmailJS, Formspree & WhatsApp Store Contact</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 text-slate-300 hover:text-white rounded-full hover:bg-slate-800 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <form onSubmit={handleSave} className="p-6 space-y-4 overflow-y-auto max-h-[80vh]">
+          {saved && (
+            <div className="p-3 bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 rounded-xl text-xs font-bold flex items-center gap-2">
+              <Check className="w-4 h-4 text-emerald-600" />
+              Paramètres enregistrés avec succès !
+            </div>
+          )}
+
+          <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 rounded-xl text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
+            <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            <span>
+              Les commandes envoyées par vos clients sont automatiquement adressées à <strong>{recipientEmail}</strong>. 
+              Configurez vos clés EmailJS gratuites ou utilisez le bouton WhatsApp secours.
+            </span>
+          </div>
+
+          {/* Email Destinataire */}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Email de réception des commandes
+            </label>
+            <div className="relative">
+              <input
+                type="email"
+                value={recipientEmail}
+                onChange={(e) => setRecipientEmail(e.target.value)}
+                placeholder="marketdzzoom@gmail.com"
+                className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-brand-orange focus:outline-none"
+              />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+            </div>
+          </div>
+
+          {/* Store WhatsApp Phone */}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Numéro WhatsApp de la boutique (Réception directe)
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                value={storePhone}
+                onChange={(e) => setStorePhone(e.target.value)}
+                placeholder="0550000000"
+                className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-brand-orange focus:outline-none"
+              />
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+            </div>
+          </div>
+
+          {/* EmailJS Parameters */}
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              Clés EmailJS (Optionnel)
+            </h4>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                Public Key (EmailJS)
+              </label>
+              <input
+                type="text"
+                value={publicKey}
+                onChange={(e) => setPublicKey(e.target.value)}
+                placeholder="Ex: user_xyz123abc"
+                className="w-full p-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-brand-orange focus:outline-none"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                  Service ID
+                </label>
+                <input
+                  type="text"
+                  value={serviceId}
+                  onChange={(e) => setServiceId(e.target.value)}
+                  placeholder="service_xyz"
+                  className="w-full p-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-brand-orange focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                  Template ID
+                </label>
+                <input
+                  type="text"
+                  value={templateId}
+                  onChange={(e) => setTemplateId(e.target.value)}
+                  placeholder="template_abc"
+                  className="w-full p-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-brand-orange focus:outline-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Formspree Endpoint Alternative */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+              Alternative Formspree Endpoint URL (Optionnel)
+            </label>
+            <input
+              type="url"
+              value={formspreeEndpoint}
+              onChange={(e) => setFormspreeEndpoint(e.target.value)}
+              placeholder="https://formspree.io/f/moqgz..."
+              className="w-full p-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-brand-orange focus:outline-none"
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="w-full bg-brand-orange hover:bg-brand-orange-hover text-white py-3 rounded-xl font-bold text-xs shadow-md transition-all active:scale-95 mt-4"
+          >
+            Enregistrer les paramètres
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
