@@ -1,8 +1,11 @@
 import React from 'react';
 import Logo from './Logo';
-import { Truck, ShieldCheck, PhoneCall, Mail, MapPin, Heart } from 'lucide-react';
+import { Truck, ShieldCheck, PhoneCall, Mail, MapPin, Heart, Lock } from 'lucide-react';
+import { TRANSLATIONS } from '../data/translations';
 
-export default function Footer({ onCategorySelect, storePhone, recipientEmail }) {
+export default function Footer({ onCategorySelect, storePhone, recipientEmail, onOpenAdminLogin, lang = 'fr' }) {
+  const t = TRANSLATIONS[lang] || TRANSLATIONS.fr;
+
   return (
     <footer className="bg-brand-navy text-white pt-16 pb-8 border-t border-slate-800 transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -14,8 +17,8 @@ export default function Footer({ onCategorySelect, storePhone, recipientEmail })
               <Truck className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="font-extrabold text-sm text-white">Livraison dans 69 Wilayas</h4>
-              <p className="text-xs text-slate-400">Expédition rapide à domicile ou en point relais.</p>
+              <h4 className="font-extrabold text-sm text-white">{t.footerNotice1}</h4>
+              <p className="text-xs text-slate-400">{t.footerNotice1Desc}</p>
             </div>
           </div>
 
@@ -24,8 +27,8 @@ export default function Footer({ onCategorySelect, storePhone, recipientEmail })
               <ShieldCheck className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="font-extrabold text-sm text-white">Paiement à la Livraison</h4>
-              <p className="text-xs text-slate-400">Payez en espèces après inspection de votre produit.</p>
+              <h4 className="font-extrabold text-sm text-white">{t.footerNotice2}</h4>
+              <p className="text-xs text-slate-400">{t.footerNotice2Desc}</p>
             </div>
           </div>
 
@@ -34,8 +37,8 @@ export default function Footer({ onCategorySelect, storePhone, recipientEmail })
               <PhoneCall className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="font-extrabold text-sm text-white">Service Client 7j/7</h4>
-              <p className="text-xs text-slate-400">Assistance téléphonique et conseils personnalisés.</p>
+              <h4 className="font-extrabold text-sm text-white">{t.footerNotice3}</h4>
+              <p className="text-xs text-slate-400">{t.footerNotice3Desc}</p>
             </div>
           </div>
         </div>
@@ -47,18 +50,18 @@ export default function Footer({ onCategorySelect, storePhone, recipientEmail })
           <div className="md:col-span-1 space-y-4">
             <Logo />
             <p className="text-xs text-slate-400 leading-relaxed">
-              Zoom Market Dz est votre marketplace de confiance en Algérie. Nous sélectionnons les meilleurs produits high-tech, accessoires et objets tendance au meilleur prix.
+              {t.footerAbout}
             </p>
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-300">
               <MapPin className="w-4 h-4 text-brand-orange" />
-              <span>Couverture Nationale (69 Wilayas)</span>
+              <span>{t.nationalCoverage}</span>
             </div>
           </div>
 
           {/* Quick Categories */}
           <div className="space-y-3">
             <h4 className="text-xs font-extrabold uppercase tracking-wider text-brand-orange">
-              Catégories Principales
+              {t.categoriesHeader}
             </h4>
             <ul className="space-y-2 text-xs text-slate-300 font-medium">
               {['High-Tech', 'Électronique', 'Mode & Habillement', 'Maison & Déco', 'Beauté & Santé'].map((cat) => (
@@ -77,7 +80,7 @@ export default function Footer({ onCategorySelect, storePhone, recipientEmail })
           {/* Customer Service */}
           <div className="space-y-3">
             <h4 className="text-xs font-extrabold uppercase tracking-wider text-brand-orange">
-              Contact & Assistance
+              {t.contactSupport}
             </h4>
             <ul className="space-y-2.5 text-xs text-slate-300">
               <li className="flex items-center gap-2">
@@ -98,20 +101,31 @@ export default function Footer({ onCategorySelect, storePhone, recipientEmail })
           {/* Order Info */}
           <div className="space-y-3">
             <h4 className="text-xs font-extrabold uppercase tracking-wider text-brand-orange">
-              Engagements & Sécurité
+              {t.securityGuarantee}
             </h4>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Toutes les commandes sont enregistrées et confirmées par téléphone avant expédition. Vous vérifiez votre marchandise à la réception avant de procéder au règlement.
+              {t.securityDesc}
             </p>
           </div>
         </div>
 
-        {/* Bottom Copyright */}
+        {/* Bottom Copyright & Admin Login Link */}
         <div className="pt-8 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
-          <p>© {new Date().getFullYear()} Zoom Market Dz. Tous droits réservés.</p>
-          <p className="flex items-center gap-1">
-            Conçu avec <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" /> pour le e-commerce en Algérie 🇩🇿
-          </p>
+          <p>© {new Date().getFullYear()} Zoom Market Dz. {t.allRightsReserved}</p>
+          
+          <div className="flex items-center gap-4">
+            <p className="flex items-center gap-1">
+              {t.madeWithLove}
+            </p>
+            <span className="text-slate-700">•</span>
+            <button
+              onClick={onOpenAdminLogin}
+              className="text-slate-500 hover:text-white transition-colors flex items-center gap-1 text-[11px]"
+            >
+              <Lock className="w-3 h-3 text-brand-orange" />
+              <span>Espace Admin 🔒</span>
+            </button>
+          </div>
         </div>
 
       </div>

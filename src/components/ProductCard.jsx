@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { ShoppingCart, Eye, Star, Check, AlertTriangle } from 'lucide-react';
 import { formatPrice } from '../utils/formatters';
+import { TRANSLATIONS, CATEGORY_MAP_AR } from '../data/translations';
 
-export default function ProductCard({ product, onAddToCart, onQuickView }) {
+export default function ProductCard({ product, onAddToCart, onQuickView, lang = 'fr' }) {
   const [added, setAdded] = useState(false);
   const [imgError, setImgError] = useState(false);
 
-  const isOutOfStock = product.inStock === false || product.stockQuantity === 0 || product.badge === 'Rupture de Stock';
+  const t = TRANSLATIONS[lang] || TRANSLATIONS.fr;
+
+  const isOutOfStock = product.inStock === false || product.stockQuantity === 0 || product.badge === 'Rupture de Stock' || product.badge === 'نفذت الكمية';
 
   const handleAdd = (e) => {
     e.stopPropagation();
@@ -23,6 +26,11 @@ export default function ProductCard({ product, onAddToCart, onQuickView }) {
   const primaryImage = (product.images && product.images.length > 0) ? product.images[0] : product.image;
   const fallbackImg = "https://images.unsplash.com/photo-1560343090-f0409e92791a?auto=format&fit=crop&w=600&q=80";
 
+  // Dynamic Arabic Title & Description if provided
+  const titleText = (lang === 'ar' && product.titleAr) ? product.titleAr : product.title;
+  const descText = (lang === 'ar' && product.descriptionAr) ? product.descriptionAr : product.description;
+  const categoryLabel = (lang === 'ar' && CATEGORY_MAP_AR[product.category]) ? CATEGORY_MAP_AR[product.category] : product.category;
+
   return (
     <div 
       onClick={() => onQuickView(product)}
@@ -32,9 +40,9 @@ export default function ProductCard({ product, onAddToCart, onQuickView }) {
         {/* Top Badges */}
         <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 items-start">
           {isOutOfStock ? (
-            <span className="bg-rose-600 text-white text-[11px] font-extrabold px-2.5 py-1 rounded-lg shadow-md uppercase tracking-wider flex items-center gap-1">
+            <span className="bg-red-700 text-white text-[11px] font-extrabold px-2.5 py-1 rounded-lg shadow-md uppercase tracking-wider flex items-center gap-1">
               <AlertTriangle className="w-3 h-3" />
-              Rupture de stock
+              {t.outOfStock}
             </span>
           ) : (
             product.badge && (
@@ -44,7 +52,7 @@ export default function ProductCard({ product, onAddToCart, onQuickView }) {
             )
           )}
           {discountPercent && !isOutOfStock && (
-            <span className="bg-rose-600 text-white text-[11px] font-extrabold px-2 py-0.5 rounded-md shadow-sm">
+            <span className="bg-amber-600 text-white text-[11px] font-extrabold px-2 py-0.5 rounded-md shadow-sm">
               -{discountPercent}%
             </span>
           )}
@@ -54,7 +62,7 @@ export default function ProductCard({ product, onAddToCart, onQuickView }) {
         <div className="relative aspect-square w-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
           <img
             src={imgError || !primaryImage ? fallbackImg : primaryImage}
-            alt={product.title}
+            alt={titleText}
             onError={() => setImgError(true)}
             className={`w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ease-out ${
               isOutOfStock ? 'grayscale opacity-60' : ''
@@ -64,12 +72,12 @@ export default function ProductCard({ product, onAddToCart, onQuickView }) {
 
           {/* Multiple images indicator badge */}
           {product.images && product.images.length > 1 && (
-            <span className="absolute bottom-2.5 right-2.5 bg-brand-navy/80 text-white text-[10px] font-bold px-2 py-0.5 rounded-md backdrop-blur-sm shadow">
-              +{product.images.length} photos
+            <span className="absolute bottom-2.5 right-2.5 bg-brand-navy/85 text-white text-[10px] font-bold px-2 py-0.5 rounded-md backdrop-blur-sm shadow">
+              +{product.images.length} {t.photosCount}
             </span>
           )}
 
-          <div className="absolute inset-0 bg-brand-navy/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+          <div className="absolute inset-0 bg-brand-navy/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -78,17 +86,17 @@ export default function ProductCard({ product, onAddToCart, onQuickView }) {
               className="bg-white/90 hover:bg-white text-brand-navy p-3 rounded-full shadow-lg transform -translate-y-2 group-hover:translate-y-0 transition-all duration-300 font-medium text-xs flex items-center gap-1.5"
             >
               <Eye className="w-4 h-4 text-brand-orange" />
-              <span>Aperçu</span>
+              <span>{t.quickView}</span>
             </button>
           </div>
         </div>
 
         {/* Card Content */}
         <div className="p-4 sm:p-5">
-          {/* Category & Rating & Stock count */}
+          {/* Category & Rating */}
           <div className="flex items-center justify-between gap-2 mb-1.5">
             <span className="text-[11px] font-bold text-brand-orange uppercase tracking-wider">
-              {product.category || 'Général'}
+              {categoryLabel || 'Général'}
             </span>
             <div className="flex items-center gap-1 text-amber-500 text-xs font-bold">
               <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
@@ -99,12 +107,12 @@ export default function ProductCard({ product, onAddToCart, onQuickView }) {
 
           {/* Title */}
           <h3 className="font-bold text-slate-900 dark:text-white text-base sm:text-lg line-clamp-2 leading-snug group-hover:text-brand-orange transition-colors">
-            {product.title}
+            {titleText}
           </h3>
 
           {/* Short Description */}
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed">
-            {product.description}
+            {descText}
           </p>
         </div>
       </div>
@@ -112,7 +120,7 @@ export default function ProductCard({ product, onAddToCart, onQuickView }) {
       {/* Card Footer: Price & Add to Cart */}
       <div className="p-4 sm:p-5 pt-0 mt-auto border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between gap-3">
         <div>
-          <span className="text-xs text-slate-400 block -mb-0.5 font-medium">Prix</span>
+          <span className="text-xs text-slate-400 block -mb-0.5 font-medium">{t.price}</span>
           <div className="flex items-baseline gap-2">
             <span className="font-extrabold text-slate-900 dark:text-white text-lg sm:text-xl">
               {formatPrice(product.price)}
@@ -137,16 +145,16 @@ export default function ProductCard({ product, onAddToCart, onQuickView }) {
           }`}
         >
           {isOutOfStock ? (
-            <span>Indisponible</span>
+            <span>{t.indisponible}</span>
           ) : added ? (
             <>
               <Check className="w-4 h-4" />
-              <span>Ajouté</span>
+              <span>{t.added}</span>
             </>
           ) : (
             <>
               <ShoppingCart className="w-4 h-4" />
-              <span className="hidden sm:inline">Ajouter</span>
+              <span className="hidden sm:inline">{t.addToCart}</span>
             </>
           )}
         </button>

@@ -23,8 +23,8 @@ export default function Logo({ className = "h-11", showText = true }) {
               MARKET
             </span>
           </div>
-          <span className="text-[10px] font-semibold tracking-widest text-slate-500 dark:text-slate-400 uppercase -mt-0.5">
-            DZ MARKETPLACE 🇩🇿
+          <span className="text-[10px] font-extrabold tracking-widest text-brand-navy dark:text-slate-300 uppercase -mt-0.5">
+            DZ STORE N°1 🇩🇿
           </span>
         </div>
       )}
