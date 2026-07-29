@@ -1,16 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Flame, 
   Clock, 
   ShoppingBag, 
   Eye, 
-  CheckCircle2, 
-  Truck, 
-  ShieldCheck, 
   Sparkles,
   ChevronLeft,
   ChevronRight,
-  Zap
+  Zap,
+  ZoomIn
 } from 'lucide-react';
 import { formatPrice } from '../utils/formatters';
 import { TRANSLATIONS } from '../data/translations';
@@ -34,18 +31,18 @@ export default function SpecialOfferBanner({ offer, onQuickView, onBuyNow, lang 
         if (prev.seconds > 0) return { ...prev, seconds: prev.seconds - 1 };
         if (prev.minutes > 0) return { ...prev, minutes: 59, seconds: 59 };
         if (prev.hours > 0) return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
-        return { hours: 23, minutes: 59, seconds: 59 }; // Reset loop
+        return { hours: 23, minutes: 59, seconds: 59 };
       });
     }, 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // Auto-play slideshow every 3.5 seconds
+  // Auto-play slideshow every 4 seconds
   useEffect(() => {
     if (images.length <= 1) return;
     const interval = setInterval(() => {
       setActiveImageIndex((prev) => (prev + 1) % images.length);
-    }, 3500);
+    }, 4000);
     return () => clearInterval(interval);
   }, [images.length]);
 
@@ -56,11 +53,13 @@ export default function SpecialOfferBanner({ offer, onQuickView, onBuyNow, lang 
   const titleText = (lang === 'ar' && offer.titleAr) ? offer.titleAr : offer.title;
   const descText = (lang === 'ar' && offer.descriptionAr) ? offer.descriptionAr : offer.description;
 
-  const handleNextImg = () => {
+  const handleNextImg = (e) => {
+    e.stopPropagation();
     setActiveImageIndex((prev) => (prev + 1) % images.length);
   };
 
-  const handlePrevImg = () => {
+  const handlePrevImg = (e) => {
+    e.stopPropagation();
     setActiveImageIndex((prev) => (prev - 1 + images.length) % images.length);
   };
 
@@ -73,7 +72,7 @@ export default function SpecialOfferBanner({ offer, onQuickView, onBuyNow, lang 
     category: offer.category || 'High-Tech',
     description: offer.description,
     descriptionAr: offer.descriptionAr,
-    image: images[0],
+    image: images[activeImageIndex] || images[0],
     images: images,
     inStock: true,
     badge: offer.tagline || 'Offre Spéciale'
@@ -185,15 +184,17 @@ export default function SpecialOfferBanner({ offer, onQuickView, onBuyNow, lang 
               className="w-full sm:w-auto bg-white/10 hover:bg-white/20 text-white border border-white/20 py-3.5 px-5 rounded-2xl font-bold text-xs transition-all flex items-center justify-center gap-2"
             >
               <Eye className="w-4 h-4 text-brand-orange" />
-              <span>{t.quickView}</span>
+              <span>{t.quickView} & Zoom HD</span>
             </button>
           </div>
         </div>
 
         {/* Right Multi-Photo Interactive Gallery (5 cols) */}
         <div className="lg:col-span-5 relative">
-          <div className="relative mx-auto max-w-md bg-white/10 backdrop-blur-md p-4 sm:p-5 rounded-3xl border border-white/20 shadow-2xl group">
-            
+          <div 
+            onClick={() => onQuickView(offerProductObj)}
+            className="relative mx-auto max-w-md bg-white/10 backdrop-blur-md p-4 sm:p-5 rounded-3xl border border-white/20 shadow-2xl group cursor-pointer"
+          >
             {/* Main Carousel Active Image */}
             <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-slate-900/60 mb-3 border border-white/10">
               <img
@@ -202,13 +203,19 @@ export default function SpecialOfferBanner({ offer, onQuickView, onBuyNow, lang 
                 className="w-full h-full object-cover transition-all duration-500 group-hover:scale-105"
               />
 
+              {/* Zoom HD Prompt Badge */}
+              <div className="absolute top-3 right-3 bg-brand-navy/80 text-white text-[11px] font-bold px-2.5 py-1 rounded-full backdrop-blur-md flex items-center gap-1 shadow">
+                <ZoomIn className="w-3.5 h-3.5 text-brand-orange" />
+                <span>Zoom HD</span>
+              </div>
+
               {/* Prev / Next Arrows if multi-images */}
               {images.length > 1 && (
                 <>
                   <button
                     type="button"
                     onClick={handlePrevImg}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-brand-navy/80 hover:bg-brand-orange text-white p-2 rounded-full backdrop-blur-md transition-colors shadow"
+                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-brand-navy/80 hover:bg-brand-orange text-white p-2 rounded-full backdrop-blur-md transition-colors shadow z-10"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
@@ -216,7 +223,7 @@ export default function SpecialOfferBanner({ offer, onQuickView, onBuyNow, lang 
                   <button
                     type="button"
                     onClick={handleNextImg}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-brand-navy/80 hover:bg-brand-orange text-white p-2 rounded-full backdrop-blur-md transition-colors shadow"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-brand-navy/80 hover:bg-brand-orange text-white p-2 rounded-full backdrop-blur-md transition-colors shadow z-10"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>
@@ -229,14 +236,17 @@ export default function SpecialOfferBanner({ offer, onQuickView, onBuyNow, lang 
               </span>
             </div>
 
-            {/* Thumbnail Navigation Selector (At least 3-4 photos) */}
+            {/* Thumbnail Navigation Selector */}
             {images.length > 1 && (
               <div className="flex items-center justify-center gap-2 overflow-x-auto no-scrollbar py-1">
                 {images.map((img, idx) => (
                   <button
                     type="button"
                     key={idx}
-                    onClick={() => setActiveImageIndex(idx)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveImageIndex(idx);
+                    }}
                     className={`w-14 h-14 rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 ${
                       activeImageIndex === idx
                         ? 'border-brand-orange shadow-lg scale-105'

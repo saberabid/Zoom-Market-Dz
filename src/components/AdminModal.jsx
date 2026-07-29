@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   PlusCircle, 
@@ -11,12 +11,41 @@ import {
   Images,
   Globe,
   Sparkles,
-  Clock,
-  Layers
+  ClipboardList,
+  PhoneCall,
+  MapPin,
+  Calendar,
+  Filter,
+  Layers,
+  DollarSign
 } from 'lucide-react';
 import { CATEGORIES } from '../data/initialProducts';
 import { formatPrice } from '../utils/formatters';
-import { getStoredSpecialOffer, saveSpecialOffer } from '../utils/storage';
+import { 
+  getStoredSpecialOffer, 
+  saveSpecialOffer, 
+  getStoredOrders, 
+  updateOrderStatus, 
+  deleteOrderFromStorage 
+} from '../utils/storage';
+
+const MONTHS_LIST = [
+  { value: 'Tous', label: 'Tous les mois' },
+  { value: '01', label: 'Janvier' },
+  { value: '02', label: 'Février' },
+  { value: '03', label: 'Mars' },
+  { value: '04', label: 'Avril' },
+  { value: '05', label: 'Mai' },
+  { value: '06', label: 'Juin' },
+  { value: '07', label: 'Juillet' },
+  { value: '08', label: 'Août' },
+  { value: '09', label: 'Septembre' },
+  { value: '10', label: 'Octobre' },
+  { value: '11', label: 'Novembre' },
+  { value: '12', label: 'Décembre' }
+];
+
+const YEARS_LIST = ['Toutes', '2026', '2025', '2024'];
 
 export default function AdminModal({
   isOpen,
@@ -28,8 +57,14 @@ export default function AdminModal({
   specialOffer,
   onUpdateSpecialOffer
 }) {
-  const [activeTab, setActiveTab] = useState('add'); // 'add', 'manage', 'special_offer'
+  const [activeTab, setActiveTab] = useState('orders'); // 'orders', 'add', 'special_offer', 'manage'
   
+  // Orders Management State
+  const [orders, setOrders] = useState([]);
+  const [orderStatusFilter, setOrderStatusFilter] = useState('Tous');
+  const [selectedMonth, setSelectedMonth] = useState('Tous');
+  const [selectedYear, setSelectedYear] = useState('Toutes');
+
   // Add Product Form State
   const [title, setTitle] = useState('');
   const [titleAr, setTitleAr] = useState('');
@@ -65,7 +100,53 @@ export default function AdminModal({
   const [formSuccess, setFormSuccess] = useState(false);
   const [soSuccess, setSoSuccess] = useState(false);
 
+  // Load orders when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      setOrders(getStoredOrders());
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
+
+  const handleStatusChange = (orderId, newStatus) => {
+    const updated = updateOrderStatus(orderId, newStatus);
+    setOrders(updated);
+  };
+
+  const handleDeleteOrder = (orderId) => {
+    if (window.confirm('Voulez-vous vraiment supprimer cette commande ?')) {
+      const updated = deleteOrderFromStorage(orderId);
+      setOrders(updated);
+    }
+  };
+
+  // Filtered orders list by Status, Month, and Year
+  const filteredOrders = orders.filter((ord) => {
+    // Status Filter
+    if (orderStatusFilter !== 'Tous' && ord.status !== orderStatusFilter) {
+      return false;
+    }
+
+    const orderDate = ord.createdAt ? new Date(ord.createdAt) : new Date();
+    const orderMonth = String(orderDate.getMonth() + 1).padStart(2, '0');
+    const orderYear = String(orderDate.getFullYear());
+
+    // Month Filter
+    if (selectedMonth !== 'Tous' && orderMonth !== selectedMonth) {
+      return false;
+    }
+
+    // Year Filter
+    if (selectedYear !== 'Toutes' && orderYear !== selectedYear) {
+      return false;
+    }
+
+    return true;
+  });
+
+  // Calculate Total Sales Revenue for Filtered Period
+  const totalPeriodRevenue = filteredOrders.reduce((sum, ord) => sum + (ord.total || 0), 0);
 
   // Handle Uploading Multiple Image Files for Add Product
   const handleMultipleImageFiles = (e) => {
@@ -111,7 +192,6 @@ export default function AdminModal({
     setSoImageFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Select Catalog product to quick-fill Special Offer
   const handleSelectProductForSpecialOffer = (prodId) => {
     const p = products.find((item) => item.id === prodId);
     if (p) {
@@ -196,7 +276,7 @@ export default function AdminModal({
 
     const updatedOffer = {
       enabled: soEnabled,
-      tagline: soTagline.trim() || 'Vente Flash ⚡',
+      tagline: soTagline.trim() || 'Vente Flash 24H ⚡',
       seasonBadge: soSeasonBadge.trim() || 'Arrivage Spécial Saison',
       title: soTitle.trim(),
       titleAr: soTitleAr.trim() || soTitle.trim(),
@@ -218,7 +298,7 @@ export default function AdminModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-brand-navy/60 backdrop-blur-sm animate-fadeIn">
       <div 
-        className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col"
+        className="bg-white dark:bg-slate-900 rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
@@ -226,8 +306,8 @@ export default function AdminModal({
           <div className="flex items-center gap-2.5">
             <Package className="w-5 h-5 text-brand-orange" />
             <div>
-              <h2 className="font-extrabold text-lg">Espace Administration & Configuration</h2>
-              <p className="text-xs text-slate-300">Gestion des produits, stocks et de l'Offre Spéciale</p>
+              <h2 className="font-extrabold text-lg">Espace Administration Zoom Market Dz</h2>
+              <p className="text-xs text-slate-300">Suivi des commandes par mois/année, produits & Offre Spéciale</p>
             </div>
           </div>
           
@@ -241,6 +321,19 @@ export default function AdminModal({
 
         {/* Tab Navigation */}
         <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-850 px-4 pt-3 overflow-x-auto no-scrollbar">
+          <button
+            type="button"
+            onClick={() => setActiveTab('orders')}
+            className={`px-4 py-2 text-xs font-bold rounded-t-xl transition-colors border-b-2 flex items-center gap-1.5 whitespace-nowrap ${
+              activeTab === 'orders'
+                ? 'border-brand-orange text-brand-orange bg-white dark:bg-slate-900'
+                : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <ClipboardList className="w-4 h-4 text-brand-orange" />
+            Commandes Clients ({orders.length})
+          </button>
+
           <button
             type="button"
             onClick={() => setActiveTab('add')}
@@ -264,7 +357,7 @@ export default function AdminModal({
             }`}
           >
             <Zap className="w-4 h-4 text-brand-orange" />
-            ⭐ Offre Spéciale du Jour
+            ⭐ Offre Spéciale
           </button>
 
           <button
@@ -277,14 +370,213 @@ export default function AdminModal({
             }`}
           >
             <Package className="w-4 h-4" />
-            Produits Publiés ({products.length})
+            Boutique ({products.length})
           </button>
         </div>
 
         {/* Modal Content */}
         <div className="p-6 overflow-y-auto flex-1">
           
-          {/* TAB 1: Add New Product */}
+          {/* TAB 1: CLIENT ORDERS LISTING WITH DATE & MONTH FILTERS */}
+          {activeTab === 'orders' && (
+            <div className="space-y-4">
+              
+              {/* Filter Bar with Month, Year & Status Selectors */}
+              <div className="p-4 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <span className="text-xs font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <Filter className="w-4 h-4 text-brand-orange" />
+                    Filtrer les Commandes par Période (Mois / Année) & Statut
+                  </span>
+
+                  <span className="text-xs font-black text-brand-orange bg-white dark:bg-slate-900 px-3 py-1 rounded-xl border border-slate-200 dark:border-slate-700">
+                    Total Période : {formatPrice(totalPeriodRevenue)}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                  
+                  {/* Month Filter Dropdown */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
+                      Mois souhaité
+                    </label>
+                    <select
+                      value={selectedMonth}
+                      onChange={(e) => setSelectedMonth(e.target.value)}
+                      className="w-full p-2 bg-white dark:bg-slate-900 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-brand-orange focus:outline-none"
+                    >
+                      {MONTHS_LIST.map((m) => (
+                        <option key={m.value} value={m.value}>{m.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Year Filter Dropdown */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
+                      Année souhaitée
+                    </label>
+                    <select
+                      value={selectedYear}
+                      onChange={(e) => setSelectedYear(e.target.value)}
+                      className="w-full p-2 bg-white dark:bg-slate-900 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-brand-orange focus:outline-none"
+                    >
+                      {YEARS_LIST.map((y) => (
+                        <option key={y} value={y}>{y === 'Toutes' ? 'Toutes les années' : y}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Status Filter Dropdown */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
+                      Statut de livraison
+                    </label>
+                    <select
+                      value={orderStatusFilter}
+                      onChange={(e) => setOrderStatusFilter(e.target.value)}
+                      className="w-full p-2 bg-white dark:bg-slate-900 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-brand-orange focus:outline-none"
+                    >
+                      <option value="Tous">Tous les statuts</option>
+                      <option value="En attente">🟡 En attente (Draft)</option>
+                      <option value="Validé">🔵 Validé (Confirmé)</option>
+                      <option value="Livré">🟢 Livré (Terminé)</option>
+                      <option value="Annulé">🔴 Annulé</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+                  <span>
+                    Affichage de <strong>{filteredOrders.length}</strong> commande(s) trouvée(s) pour cette période.
+                  </span>
+                  
+                  {(selectedMonth !== 'Tous' || selectedYear !== 'Toutes' || orderStatusFilter !== 'Tous') && (
+                    <button
+                      type="button"
+                      onClick={() => { setSelectedMonth('Tous'); setSelectedYear('Toutes'); setOrderStatusFilter('Tous'); }}
+                      className="text-brand-orange font-bold hover:underline"
+                    >
+                      Réinitialiser les filtres
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Orders Cards List */}
+              {filteredOrders.length > 0 ? (
+                <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
+                  {filteredOrders.map((ord) => {
+                    const cust = ord.customer || {};
+                    const items = ord.items || [];
+                    
+                    let statusBadgeClass = "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-300";
+                    if (ord.status === 'Validé') statusBadgeClass = "bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-950 dark:text-blue-300";
+                    if (ord.status === 'Livré') statusBadgeClass = "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300";
+                    if (ord.status === 'Annulé') statusBadgeClass = "bg-red-100 text-red-800 border-red-300 dark:bg-red-950 dark:text-red-300";
+
+                    return (
+                      <div 
+                        key={ord.id}
+                        className="p-4 bg-slate-50 dark:bg-slate-800/70 rounded-2xl border border-slate-200 dark:border-slate-700/80 space-y-3 shadow-sm"
+                      >
+                        {/* Top Order Row */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/60 dark:border-slate-700 pb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="font-extrabold text-xs text-brand-navy dark:text-white font-mono bg-white dark:bg-slate-900 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                              {ord.id}
+                            </span>
+                            <span className="text-[11px] text-slate-400 flex items-center gap-1">
+                              <Calendar className="w-3 h-3 text-slate-400" />
+                              {ord.date || new Date(ord.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+
+                          {/* Status Change Selector Dropdown */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-[11px] font-bold text-slate-500">Statut :</span>
+                            <select
+                              value={ord.status}
+                              onChange={(e) => handleStatusChange(ord.id, e.target.value)}
+                              className={`px-3 py-1 rounded-xl text-xs font-black border cursor-pointer focus:outline-none ${statusBadgeClass}`}
+                            >
+                              <option value="En attente">🟡 En attente (Draft)</option>
+                              <option value="Validé">🔵 Validé (Confirmé)</option>
+                              <option value="Livré">🟢 Livré (Terminé)</option>
+                              <option value="Annulé">🔴 Annulé</option>
+                            </select>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteOrder(ord.id)}
+                              className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors ml-1"
+                              title="Supprimer la commande"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Customer Info Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                          <div>
+                            <span className="text-slate-400 block text-[10px]">Client:</span>
+                            <strong className="text-slate-900 dark:text-white font-bold">{cust.fullName}</strong>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 block text-[10px]">Téléphone:</span>
+                            <a href={`tel:${cust.phone}`} className="text-brand-orange font-bold hover:underline flex items-center gap-1">
+                              <PhoneCall className="w-3 h-3" />
+                              {cust.phone}
+                            </a>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 block text-[10px]">Wilaya & Adresse:</span>
+                            <span className="text-slate-700 dark:text-slate-300 font-semibold flex items-center gap-1">
+                              <MapPin className="w-3 h-3 text-brand-orange flex-shrink-0" />
+                              {cust.wilaya} - {cust.address}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Items summary */}
+                        <div className="bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700 text-xs">
+                          <span className="font-bold text-slate-400 text-[10px] uppercase block mb-1">Produits commandés ({items.length}):</span>
+                          <ul className="space-y-1 text-slate-800 dark:text-slate-200">
+                            {items.map((it, idx) => (
+                              <li key={idx} className="flex justify-between">
+                                <span>• {it.title} x{it.quantity}</span>
+                                <span className="font-bold">{formatPrice(it.price * it.quantity)}</span>
+                              </li>
+                            ))}
+                          </ul>
+                          
+                          <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-between font-black text-slate-900 dark:text-white text-xs">
+                            <span>TOTAL À PAYER À LA LIVRAISON:</span>
+                            <span className="text-brand-orange">{formatPrice(ord.total)}</span>
+                          </div>
+                        </div>
+
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-16 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 p-6">
+                  <ClipboardList className="w-12 h-12 text-slate-400 mx-auto mb-2" />
+                  <h4 className="font-bold text-slate-800 dark:text-slate-200 text-sm">
+                    Aucune commande trouvée pour la période sélectionnée
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Essayez de changer les filtres de mois ou d'année pour consulter d'autres périodes.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 2: Add New Product */}
           {activeTab === 'add' && (
             <form onSubmit={handleSubmit} className="space-y-4">
               {formSuccess && (
@@ -294,7 +586,6 @@ export default function AdminModal({
                 </div>
               )}
 
-              {/* Titles Fr / Ar */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -325,7 +616,6 @@ export default function AdminModal({
                 </div>
               </div>
 
-              {/* Category & Badge */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -356,7 +646,6 @@ export default function AdminModal({
                 </div>
               </div>
 
-              {/* Price & Old Price */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -386,7 +675,6 @@ export default function AdminModal({
                 </div>
               </div>
 
-              {/* Stock Management */}
               <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
                 <h4 className="text-xs font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
                   <Layers className="w-3.5 h-3.5 text-brand-orange" />
@@ -426,7 +714,6 @@ export default function AdminModal({
                 </div>
               </div>
 
-              {/* Descriptions Fr / Ar */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                   Description (Français) <span className="text-rose-500">*</span>
@@ -455,7 +742,6 @@ export default function AdminModal({
                 />
               </div>
 
-              {/* Multi-Image Upload */}
               <div className="space-y-2">
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
                   <span className="flex items-center gap-1">
@@ -519,7 +805,7 @@ export default function AdminModal({
             </form>
           )}
 
-          {/* TAB 2: SPECIAL OFFER CONFIGURATION */}
+          {/* TAB 3: SPECIAL OFFER CONFIGURATION */}
           {activeTab === 'special_offer' && (
             <form onSubmit={handleSaveSpecialOfferForm} className="space-y-4">
               {soSuccess && (
@@ -529,7 +815,6 @@ export default function AdminModal({
                 </div>
               )}
 
-              {/* Enable Switcher */}
               <div className="p-3.5 bg-brand-orange/10 border border-brand-orange/30 rounded-2xl flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Zap className="w-5 h-5 text-brand-orange" />
@@ -550,7 +835,6 @@ export default function AdminModal({
                 </label>
               </div>
 
-              {/* Quick Fill From Existing Catalog */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                   Remplissage rapide : Choisir un produit existant dans le magasin
@@ -568,7 +852,6 @@ export default function AdminModal({
                 </select>
               </div>
 
-              {/* Taglines & Badges */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -597,7 +880,6 @@ export default function AdminModal({
                 </div>
               </div>
 
-              {/* Offer Title (Fr / Ar) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -628,7 +910,6 @@ export default function AdminModal({
                 </div>
               </div>
 
-              {/* Price & Old Price */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -658,7 +939,6 @@ export default function AdminModal({
                 </div>
               </div>
 
-              {/* Descriptions Fr / Ar */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                   Description de l'Offre (Français)
@@ -686,7 +966,6 @@ export default function AdminModal({
                 />
               </div>
 
-              {/* Multi-Photo Loader for Special Offer */}
               <div className="space-y-2">
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
                   <span className="flex items-center gap-1 text-brand-orange">
@@ -750,7 +1029,7 @@ export default function AdminModal({
             </form>
           )}
 
-          {/* TAB 3: Manage Products */}
+          {/* TAB 4: Manage Products */}
           {activeTab === 'manage' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">

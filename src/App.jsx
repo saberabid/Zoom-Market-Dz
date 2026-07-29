@@ -24,8 +24,7 @@ import {
 } from './utils/storage';
 
 import { 
-  Search, 
-  Flame
+  Search
 } from 'lucide-react';
 
 export default function App() {
@@ -94,9 +93,11 @@ export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Tous');
 
-  // Dark Mode State
+  // Dark Mode State - LIGHT MODE BY DEFAULT (#F8FAFC)
   const [darkMode, setDarkMode] = useState(() => {
-    return localStorage.getItem('zoom_market_dark') === 'true' || true;
+    const stored = localStorage.getItem('zoom_market_dark');
+    if (stored === null) return false; // Default is FALSE (Light Mode)
+    return stored === 'true';
   });
 
   // Modal States

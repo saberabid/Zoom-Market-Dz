@@ -17,6 +17,7 @@ import { WILAYAS } from '../data/wilayas';
 import { formatPrice, validateDZPhone } from '../utils/formatters';
 import { sendOrderNotification, generateWhatsAppOrderUrl } from '../utils/email';
 import { TRANSLATIONS } from '../data/translations';
+import { addOrderToStorage } from '../utils/storage';
 
 export default function CartDrawer({
   isOpen,
@@ -63,7 +64,7 @@ export default function CartDrawer({
     return Object.keys(errs).length === 0;
   };
 
-  // Handle Submit Order via EmailJS / Backend
+  // Handle Submit Order via EmailJS / FormSubmit + Local Storage Order Recording
   const handleSubmitOrder = async (e) => {
     e.preventDefault();
     if (cartItems.length === 0) return;
@@ -85,6 +86,9 @@ export default function CartDrawer({
       total,
       date: new Date().toLocaleString(lang === 'ar' ? 'ar-DZ' : 'fr-DZ')
     };
+
+    // Save order locally for Admin listing
+    addOrderToStorage(orderData);
 
     try {
       await sendOrderNotification({ orderData, emailConfig });
@@ -121,8 +125,12 @@ export default function CartDrawer({
       items: cartItems,
       subtotal,
       shippingFee,
-      total
+      total,
+      date: new Date().toLocaleString(lang === 'ar' ? 'ar-DZ' : 'fr-DZ')
     };
+
+    // Save order locally for Admin listing
+    addOrderToStorage(orderData);
 
     const waUrl = generateWhatsAppOrderUrl(orderData, emailConfig.storePhone);
     window.open(waUrl, '_blank');
@@ -392,6 +400,7 @@ export default function CartDrawer({
               {/* Action Buttons */}
               <div className="space-y-2 pt-2">
                 <button
+                  type="button"
                   onClick={handleSubmitOrder}
                   disabled={loading}
                   className="w-full bg-brand-orange hover:bg-brand-orange-hover text-white py-3.5 px-4 rounded-xl font-extrabold text-sm shadow-lg hover:shadow-glow transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"

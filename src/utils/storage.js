@@ -3,6 +3,7 @@ import { INITIAL_PRODUCTS } from '../data/initialProducts';
 const PRODUCTS_KEY = 'zoom_market_products_v1';
 const EMAIL_CONFIG_KEY = 'zoom_market_email_config_v1';
 const SPECIAL_OFFER_KEY = 'zoom_market_special_offer_v1';
+const ORDERS_KEY = 'zoom_market_orders_v1';
 
 // Default Initial Special Offer
 export const DEFAULT_SPECIAL_OFFER = {
@@ -78,6 +79,57 @@ export function saveSpecialOffer(offer) {
   } catch (e) {
     console.error('Error saving special offer:', e);
   }
+}
+
+// Client Orders LocalStorage Management
+export function getStoredOrders() {
+  try {
+    const data = localStorage.getItem(ORDERS_KEY);
+    if (data) {
+      const parsed = JSON.parse(data);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (e) {
+    console.error('Error reading orders from localStorage:', e);
+  }
+  return [];
+}
+
+export function saveOrders(orders) {
+  try {
+    localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
+  } catch (e) {
+    console.error('Error saving orders to localStorage:', e);
+  }
+}
+
+export function addOrderToStorage(orderData) {
+  const currentOrders = getStoredOrders();
+  const newOrder = {
+    id: `ORD-${Date.now()}`,
+    status: 'En attente', // 'En attente', 'Validé', 'Livré', 'Annulé'
+    createdAt: new Date().toISOString(),
+    ...orderData
+  };
+  const updated = [newOrder, ...currentOrders];
+  saveOrders(updated);
+  return updated;
+}
+
+export function updateOrderStatus(orderId, newStatus) {
+  const currentOrders = getStoredOrders();
+  const updated = currentOrders.map((ord) => 
+    ord.id === orderId ? { ...ord, status: newStatus } : ord
+  );
+  saveOrders(updated);
+  return updated;
+}
+
+export function deleteOrderFromStorage(orderId) {
+  const currentOrders = getStoredOrders();
+  const updated = currentOrders.filter((ord) => ord.id !== orderId);
+  saveOrders(updated);
+  return updated;
 }
 
 // Default EmailJS Configuration
