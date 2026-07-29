@@ -46,7 +46,7 @@ export default function Header({
       
       {/* Admin Logged-In Control Bar Banner */}
       {isAdminLoggedIn && (
-        <div className="bg-emerald-700 text-white text-xs py-1.5 px-4 font-bold flex items-center justify-between shadow-md">
+        <div className="bg-emerald-700 text-white text-xs py-1.5 px-4 font-bold flex items-center justify-between shadow-md dir-ltr">
           <div className="flex items-center gap-2">
             <Unlock className="w-4 h-4 text-emerald-200 animate-pulse" />
             <span>Mode Administrateur Actif (Zoom Market Dz)</span>
@@ -54,6 +54,7 @@ export default function Header({
 
           <div className="flex items-center gap-3">
             <button
+              type="button"
               onClick={onOpenAdmin}
               className="bg-white/20 hover:bg-white/30 text-white px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition-colors"
             >
@@ -62,6 +63,7 @@ export default function Header({
             </button>
 
             <button
+              type="button"
               onClick={onOpenEmailConfig}
               className="bg-white/20 hover:bg-white/30 text-white px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition-colors"
             >
@@ -70,6 +72,7 @@ export default function Header({
             </button>
 
             <button
+              type="button"
               onClick={onAdminLogout}
               className="bg-red-800 hover:bg-red-900 text-white px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors"
               title="Quitter le mode Administrateur"
@@ -102,7 +105,7 @@ export default function Header({
               className="flex items-center gap-1 hover:text-brand-orange transition-colors"
             >
               <PhoneCall className="w-3 h-3 text-brand-orange" />
-              <span>{t.clientService} <strong className="text-white">{storePhone || '0550 00 00 00'}</strong></span>
+              <span>{t.clientService} <strong className="text-white" dir="ltr">{storePhone || '0550 00 00 00'}</strong></span>
             </a>
           </div>
         </div>
@@ -121,6 +124,7 @@ export default function Header({
           <div className="hidden md:flex flex-1 max-w-xl mx-4">
             <div className="relative w-full">
               <input
+                id="desktop-search-input"
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -130,6 +134,7 @@ export default function Header({
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               {searchTerm && (
                 <button
+                  type="button"
                   onClick={() => setSearchTerm('')}
                   className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-full"
                 >
@@ -144,19 +149,21 @@ export default function Header({
             
             {/* Language Switcher Button */}
             <button
+              type="button"
               onClick={() => setLang(lang === 'fr' ? 'ar' : 'fr')}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-100 bg-slate-100 dark:bg-slate-800 hover:bg-brand-navy hover:text-white dark:hover:bg-brand-orange rounded-xl transition-all border border-slate-200 dark:border-slate-700 shadow-sm"
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-100 bg-slate-100 dark:bg-slate-800 hover:bg-brand-navy hover:text-white dark:hover:bg-brand-orange rounded-xl transition-all border border-slate-200 dark:border-slate-700 shadow-sm active:scale-95"
               title="Changer de langue / تغيير اللغة"
             >
               <Globe className="w-4 h-4 text-brand-orange" />
               <span>{lang === 'fr' ? 'العربية 🇩🇿' : 'Français 🇫🇷'}</span>
             </button>
 
-            {/* Admin Space Button (Only visible if logged in or discrete trigger) */}
+            {/* Admin Space Button */}
             {isAdminLoggedIn ? (
               <button
+                type="button"
                 onClick={onOpenAdmin}
-                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-brand-orange hover:bg-brand-orange-hover rounded-xl transition-all shadow-sm"
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-brand-orange hover:bg-brand-orange-hover rounded-xl transition-all shadow-sm active:scale-95"
                 title="Gérer les produits"
               >
                 <PlusCircle className="w-4 h-4" />
@@ -164,8 +171,9 @@ export default function Header({
               </button>
             ) : (
               <button
+                type="button"
                 onClick={onOpenAdminLogin}
-                className="p-2 text-slate-400 hover:text-brand-navy dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                className="p-2 text-slate-400 hover:text-brand-navy dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors active:scale-95"
                 title="Accès Administrateur 🔒"
               >
                 <Lock className="w-4 h-4" />
@@ -174,8 +182,9 @@ export default function Header({
 
             {/* Dark Mode Toggle */}
             <button
+              type="button"
               onClick={() => setDarkMode(!darkMode)}
-              className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+              className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors active:scale-95"
               title={darkMode ? "Mode Clair" : "Mode Sombre"}
             >
               {darkMode ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5" />}
@@ -183,6 +192,7 @@ export default function Header({
 
             {/* Cart Trigger Button */}
             <button
+              type="button"
               onClick={onOpenCart}
               className="relative flex items-center gap-2 bg-brand-orange hover:bg-brand-orange-hover text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-md hover:shadow-glow transition-all active:scale-95"
             >
@@ -201,6 +211,7 @@ export default function Header({
         <div className="mt-3 md:hidden">
           <div className="relative w-full">
             <input
+              id="mobile-search-input"
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -210,6 +221,7 @@ export default function Header({
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             {searchTerm && (
               <button
+                type="button"
                 onClick={() => setSearchTerm('')}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
               >
@@ -231,6 +243,7 @@ export default function Header({
 
             return (
               <button
+                type="button"
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
                 className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all flex-shrink-0 ${

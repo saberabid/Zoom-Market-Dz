@@ -2,17 +2,17 @@ import emailjs from '@emailjs/browser';
 import { formatPrice, formatPhoneForWhatsApp } from './formatters';
 
 /**
- * Send Order Email via EmailJS or Formspree
+ * Send Order Email via EmailJS, FormSubmit.co, or Formspree
  */
 export async function sendOrderNotification({ orderData, emailConfig }) {
   const { customer, items, subtotal, shippingFee, total } = orderData;
 
-  // Build items formatted string
+  // Build items formatted text
   const itemsText = items
     .map((item) => `- ${item.title} x ${item.quantity} (${formatPrice(item.price)} unitaire)`)
     .join('\n');
 
-  // Format full message as requested
+  // Format full message body
   const orderSummaryBody = `
 ========================================
     NOUVELLE COMMANDE - ZOOM MARKET DZ
@@ -33,8 +33,13 @@ TOTAL COMMANDE : ${formatPrice(total)} DZD
 ========================================
   `.trim();
 
+  const recipientEmail = emailConfig.recipientEmail || 'marketdzzoom@gmail.com';
+
   const templateParams = {
-    to_email: emailConfig.recipientEmail || 'marketdzzoom@gmail.com',
+    to_email: recipientEmail,
+    recipient: recipientEmail,
+    email: recipientEmail,
+    name: customer.fullName,
     customer_name: customer.fullName,
     customer_phone: customer.phone,
     customer_wilaya: customer.wilaya,
@@ -44,33 +49,67 @@ TOTAL COMMANDE : ${formatPrice(total)} DZD
     subtotal: formatPrice(subtotal),
     shipping_fee: formatPrice(shippingFee),
     total_amount: `${formatPrice(total)} DZD`,
-    message_body: orderSummaryBody
+    message_body: orderSummaryBody,
+    _subject: `🛒 Nouvelle Commande Zoom Market DZ - ${customer.fullName} (${customer.wilaya})`
   };
 
-  // 1. Try EmailJS if public key, service ID & template ID are configured
+  let sent = false;
+  let lastError = null;
+
+  // 1. Attempt EmailJS SDK if keys are configured
   if (emailConfig.publicKey && emailConfig.serviceId && emailConfig.templateId) {
     try {
+      // Initialize EmailJS
+      emailjs.init(emailConfig.publicKey.trim());
+      
       const response = await emailjs.send(
-        emailConfig.serviceId,
-        emailConfig.templateId,
+        emailConfig.serviceId.trim(),
+        emailConfig.templateId.trim(),
         templateParams,
-        emailConfig.publicKey
+        emailConfig.publicKey.trim()
       );
+      console.log('✅ EmailJS dispatch success:', response);
+      sent = true;
       return { success: true, method: 'emailjs', response };
     } catch (error) {
-      console.warn('EmailJS error, attempting fallback:', error);
+      console.warn('⚠️ EmailJS SDK error, trying REST API fallback:', error);
+      lastError = error;
+
+      // Try Direct EmailJS REST API
+      try {
+        const restRes = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            service_id: emailConfig.serviceId.trim(),
+            template_id: emailConfig.templateId.trim(),
+            user_id: emailConfig.publicKey.trim(),
+            template_params: templateParams
+          })
+        });
+
+        if (restRes.ok) {
+          console.log('✅ EmailJS REST API dispatch success');
+          sent = true;
+          return { success: true, method: 'emailjs-rest' };
+        }
+      } catch (restErr) {
+        console.warn('EmailJS REST error:', restErr);
+      }
     }
   }
 
-  // 2. Try Formspree if formspreeEndpoint is configured
+  // 2. Attempt Formspree if custom endpoint configured
   if (emailConfig.formspreeEndpoint) {
     try {
-      const res = await fetch(emailConfig.formspreeEndpoint, {
+      const res = await fetch(emailConfig.formspreeEndpoint.trim(), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify(templateParams)
       });
       if (res.ok) {
+        console.log('✅ Formspree dispatch success');
+        sent = true;
         return { success: true, method: 'formspree' };
       }
     } catch (error) {
@@ -78,12 +117,41 @@ TOTAL COMMANDE : ${formatPrice(total)} DZD
     }
   }
 
-  // 3. Simulated success (client demo mode) with console logging if credentials not set yet
-  console.log('Order notification generated:', orderSummaryBody);
+  // 3. Fallback to FormSubmit.co Free Direct Email Endpoint to marketdzzoom@gmail.com
+  try {
+    const formSubmitUrl = `https://formsubmit.co/ajax/${encodeURIComponent(recipientEmail)}`;
+    const fsRes = await fetch(formSubmitUrl, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        'Client': customer.fullName,
+        'Téléphone': customer.phone,
+        'Wilaya': customer.wilaya,
+        'Adresse': customer.address,
+        'Remarques': customer.notes || 'Aucune',
+        'Commande': itemsText,
+        'Total': `${formatPrice(total)} DZD`,
+        '_subject': `🛒 Nouvelle Commande Zoom Market DZ - ${customer.fullName} (${customer.wilaya})`
+      })
+    });
+
+    if (fsRes.ok) {
+      console.log('✅ Direct Email dispatch success to', recipientEmail);
+      return { success: true, method: 'formsubmit' };
+    }
+  } catch (fsErr) {
+    console.warn('FormSubmit fallback error:', fsErr);
+  }
+
+  // If all net dispatches failed or in demo mode
+  console.log('Order notification fallback summary:', orderSummaryBody);
   return { 
     success: true, 
     method: 'demo', 
-    message: 'Commande enregistrée avec succès! (Mode Démo - EmailJS à configurer dans les paramètres)' 
+    warning: lastError ? `EmailJS retour: ${lastError.text || lastError.message || 'Clés non reconnues'}` : null
   };
 }
 

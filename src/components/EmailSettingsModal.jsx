@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, Settings, Mail, Key, Phone, Check, Info } from 'lucide-react';
+import { X, Settings, Mail, Key, Phone, Check, Info, Send } from 'lucide-react';
+import { sendOrderNotification } from '../utils/email';
 
 export default function EmailSettingsModal({ isOpen, onClose, emailConfig, onSaveConfig }) {
   const [serviceId, setServiceId] = useState(emailConfig.serviceId || '');
@@ -10,6 +11,8 @@ export default function EmailSettingsModal({ isOpen, onClose, emailConfig, onSav
   const [formspreeEndpoint, setFormspreeEndpoint] = useState(emailConfig.formspreeEndpoint || '');
 
   const [saved, setSaved] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState(null);
 
   if (!isOpen) return null;
 
@@ -31,6 +34,40 @@ export default function EmailSettingsModal({ isOpen, onClose, emailConfig, onSav
     }, 1200);
   };
 
+  const handleTestEmail = async () => {
+    setTesting(true);
+    setTestResult(null);
+
+    const testConfig = {
+      serviceId: serviceId.trim(),
+      templateId: templateId.trim(),
+      publicKey: publicKey.trim(),
+      recipientEmail: recipientEmail.trim(),
+      storePhone: storePhone.trim(),
+      formspreeEndpoint: formspreeEndpoint.trim()
+    };
+
+    const testOrder = {
+      customer: {
+        fullName: "Test Zoom Market Dz",
+        phone: "0550123456",
+        wilaya: "16 - Alger",
+        address: "Test adresse de livraison",
+        notes: "Ceci est un test de vérification d'e-mail."
+      },
+      items: [
+        { title: "Produit Test Zoom Market", quantity: 1, price: 5000 }
+      ],
+      subtotal: 5000,
+      shippingFee: 400,
+      total: 5400
+    };
+
+    const res = await sendOrderNotification({ orderData: testOrder, emailConfig: testConfig });
+    setTesting(false);
+    setTestResult(res);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-brand-navy/60 backdrop-blur-sm animate-fadeIn">
       <div 
@@ -42,8 +79,8 @@ export default function EmailSettingsModal({ isOpen, onClose, emailConfig, onSav
           <div className="flex items-center gap-2.5">
             <Settings className="w-5 h-5 text-brand-orange" />
             <div>
-              <h2 className="font-extrabold text-base">Paramètres Notifications & WhatsApp</h2>
-              <p className="text-xs text-slate-300">EmailJS, Formspree & WhatsApp Store Contact</p>
+              <h2 className="font-extrabold text-base">Configuration des Emails & WhatsApp</h2>
+              <p className="text-xs text-slate-300">Réception sur marketdzzoom@gmail.com</p>
             </div>
           </div>
           <button
@@ -63,18 +100,33 @@ export default function EmailSettingsModal({ isOpen, onClose, emailConfig, onSav
             </div>
           )}
 
-          <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 rounded-xl text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
-            <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
+          {testResult && (
+            <div className={`p-3 rounded-xl text-xs font-bold ${
+              testResult.success 
+                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' 
+                : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+            }`}>
+              <p className="font-extrabold mb-1">Résultat du test d'envoi :</p>
+              <p>Méthode utilisée : <strong>{testResult.method}</strong></p>
+              {testResult.method === 'formsubmit' && (
+                <p className="mt-1 font-normal text-[11px]">
+                  📩 Un e-mail de confirmation FormSubmit a été envoyé à <strong>{recipientEmail}</strong>. Veuillez ouvrir votre boîte e-mail et cliquer sur "Activate Form" pour valider la réception automatique de vos commandes !
+                </p>
+              )}
+            </div>
+          )}
+
+          <div className="p-3 bg-blue-50 dark:bg-slate-800 border border-blue-200 dark:border-slate-700 rounded-xl text-xs text-blue-900 dark:text-slate-200 flex items-start gap-2">
+            <Info className="w-4 h-4 text-brand-orange flex-shrink-0 mt-0.5" />
             <span>
-              Les commandes envoyées par vos clients sont automatiquement adressées à <strong>{recipientEmail}</strong>. 
-              Configurez vos clés EmailJS gratuites ou utilisez le bouton WhatsApp secours.
+              Les commandes sont adressées à <strong>{recipientEmail}</strong>. Pour lier votre compte EmailJS, saisissez vos clés ci-dessous.
             </span>
           </div>
 
           {/* Email Destinataire */}
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-              Email de réception des commandes
+              Adresse e-mail de réception des commandes
             </label>
             <div className="relative">
               <input
@@ -91,7 +143,7 @@ export default function EmailSettingsModal({ isOpen, onClose, emailConfig, onSav
           {/* Store WhatsApp Phone */}
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-              Numéro WhatsApp de la boutique (Réception directe)
+              Numéro WhatsApp de réception directe
             </label>
             <div className="relative">
               <input
@@ -107,8 +159,8 @@ export default function EmailSettingsModal({ isOpen, onClose, emailConfig, onSav
 
           {/* EmailJS Parameters */}
           <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Clés EmailJS (Optionnel)
+            <h4 className="text-xs font-bold uppercase tracking-wider text-brand-orange flex items-center gap-1">
+              <Key className="w-3.5 h-3.5" /> Clés EmailJS.com
             </h4>
 
             <div>
@@ -120,7 +172,7 @@ export default function EmailSettingsModal({ isOpen, onClose, emailConfig, onSav
                 value={publicKey}
                 onChange={(e) => setPublicKey(e.target.value)}
                 placeholder="Ex: user_xyz123abc"
-                className="w-full p-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-brand-orange focus:outline-none"
+                className="w-full p-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-brand-orange focus:outline-none font-mono"
               />
             </div>
 
@@ -134,7 +186,7 @@ export default function EmailSettingsModal({ isOpen, onClose, emailConfig, onSav
                   value={serviceId}
                   onChange={(e) => setServiceId(e.target.value)}
                   placeholder="service_xyz"
-                  className="w-full p-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-brand-orange focus:outline-none"
+                  className="w-full p-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-brand-orange focus:outline-none font-mono"
                 />
               </div>
 
@@ -147,29 +199,28 @@ export default function EmailSettingsModal({ isOpen, onClose, emailConfig, onSav
                   value={templateId}
                   onChange={(e) => setTemplateId(e.target.value)}
                   placeholder="template_abc"
-                  className="w-full p-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-brand-orange focus:outline-none"
+                  className="w-full p-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-brand-orange focus:outline-none font-mono"
                 />
               </div>
             </div>
           </div>
 
-          {/* Formspree Endpoint Alternative */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-              Alternative Formspree Endpoint URL (Optionnel)
-            </label>
-            <input
-              type="url"
-              value={formspreeEndpoint}
-              onChange={(e) => setFormspreeEndpoint(e.target.value)}
-              placeholder="https://formspree.io/f/moqgz..."
-              className="w-full p-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-brand-orange focus:outline-none"
-            />
+          {/* Test Email Dispatch Button */}
+          <div className="pt-2 flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={handleTestEmail}
+              disabled={testing}
+              className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 py-2.5 px-4 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-colors"
+            >
+              <Send className="w-3.5 h-3.5 text-brand-orange" />
+              <span>{testing ? 'Envoi du test...' : 'Envoyer un e-mail de test'}</span>
+            </button>
           </div>
 
           <button
             type="submit"
-            className="w-full bg-brand-orange hover:bg-brand-orange-hover text-white py-3 rounded-xl font-bold text-xs shadow-md transition-all active:scale-95 mt-4"
+            className="w-full bg-brand-orange hover:bg-brand-orange-hover text-white py-3 rounded-xl font-extrabold text-sm shadow-md transition-all active:scale-95 mt-4"
           >
             Enregistrer les paramètres
           </button>
