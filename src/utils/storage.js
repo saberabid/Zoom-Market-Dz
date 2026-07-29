@@ -2,6 +2,29 @@ import { INITIAL_PRODUCTS } from '../data/initialProducts';
 
 const PRODUCTS_KEY = 'zoom_market_products_v1';
 const EMAIL_CONFIG_KEY = 'zoom_market_email_config_v1';
+const SPECIAL_OFFER_KEY = 'zoom_market_special_offer_v1';
+
+// Default Initial Special Offer
+export const DEFAULT_SPECIAL_OFFER = {
+  enabled: true,
+  tagline: "Vente Flash 24H ⚡",
+  seasonBadge: "Arrivage Spécial Saison",
+  title: "Écouteurs Sans Fil Active Noise Cancelling Pro",
+  titleAr: "سماعات لاسلكية عازلة للضوضاء Pro",
+  price: 5800,
+  oldPrice: 7800,
+  category: "High-Tech",
+  description: "Offre exceptionnelle limitée ! Écouteurs bluetooth haute fidélité avec réduction active du bruit (ANC), autonomie 28h et coffret premium.",
+  descriptionAr: "عرض خاص محدود! سماعات بلوتوث عالية الدقة مع إلغاء الضوضاء النشط وبطارية 28 ساعة.",
+  images: [
+    "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&w=800&q=80",
+    "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80",
+    "https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&w=800&q=80",
+    "https://images.unsplash.com/photo-1484704849700-f032a568e944?auto=format&fit=crop&w=800&q=80"
+  ],
+  productId: "prod-1",
+  countdownHours: 24
+};
 
 // Load products from localStorage or fallback to initial dataset
 export function getStoredProducts() {
@@ -16,7 +39,6 @@ export function getStoredProducts() {
   } catch (e) {
     console.error('Error reading products from localStorage:', e);
   }
-  // Save initial products if none exist
   saveProducts(INITIAL_PRODUCTS);
   return INITIAL_PRODUCTS;
 }
@@ -36,14 +58,36 @@ export function resetStoredProducts() {
   return INITIAL_PRODUCTS;
 }
 
+// Special Offer Storage
+export function getStoredSpecialOffer() {
+  try {
+    const data = localStorage.getItem(SPECIAL_OFFER_KEY);
+    if (data) {
+      return { ...DEFAULT_SPECIAL_OFFER, ...JSON.parse(data) };
+    }
+  } catch (e) {
+    console.error('Error reading special offer:', e);
+  }
+  saveSpecialOffer(DEFAULT_SPECIAL_OFFER);
+  return DEFAULT_SPECIAL_OFFER;
+}
+
+export function saveSpecialOffer(offer) {
+  try {
+    localStorage.setItem(SPECIAL_OFFER_KEY, JSON.stringify(offer));
+  } catch (e) {
+    console.error('Error saving special offer:', e);
+  }
+}
+
 // Default EmailJS Configuration
 export const DEFAULT_EMAIL_CONFIG = {
-  serviceId: '', // e.g. 'service_zoom'
-  templateId: '', // e.g. 'template_order'
-  publicKey: '',  // EmailJS Public Key
+  serviceId: '',
+  templateId: '',
+  publicKey: '',
   recipientEmail: 'marketdzzoom@gmail.com',
-  storePhone: '0550000000', // Default store WhatsApp contact number
-  formspreeEndpoint: '' // Alternative Formspree URL e.g. https://formspree.io/f/xyz
+  storePhone: '0550000000',
+  formspreeEndpoint: ''
 };
 
 export function getStoredEmailConfig() {

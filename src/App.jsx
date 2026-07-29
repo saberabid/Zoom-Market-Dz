@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Header from './components/Header';
+import SpecialOfferBanner from './components/SpecialOfferBanner';
 import ProductCard from './components/ProductCard';
 import ProductModal from './components/ProductModal';
 import CartDrawer from './components/CartDrawer';
@@ -17,21 +18,21 @@ import {
   saveProducts, 
   resetStoredProducts, 
   getStoredEmailConfig, 
-  saveEmailConfig 
+  saveEmailConfig,
+  getStoredSpecialOffer,
+  saveSpecialOffer
 } from './utils/storage';
 
 import { 
-  Sparkles, 
-  Truck, 
-  ShieldCheck, 
   Search, 
   Flame
 } from 'lucide-react';
 
 export default function App() {
-  // Products & Email Config State
+  // Products, Email Config & Special Offer State
   const [products, setProducts] = useState(getStoredProducts);
   const [emailConfig, setEmailConfig] = useState(getStoredEmailConfig);
+  const [specialOffer, setSpecialOffer] = useState(getStoredSpecialOffer);
 
   // Language State: 'fr' or 'ar'
   const [lang, setLang] = useState(() => {
@@ -187,6 +188,12 @@ export default function App() {
     setProducts(initial);
   };
 
+  // Special Offer Admin Operations
+  const handleUpdateSpecialOffer = (updatedOffer) => {
+    setSpecialOffer(updatedOffer);
+    saveSpecialOffer(updatedOffer);
+  };
+
   // Email Config Update
   const handleSaveEmailConfig = (newConfig) => {
     setEmailConfig(newConfig);
@@ -250,71 +257,14 @@ export default function App() {
       {/* Main Content Area */}
       <main className="flex-1">
         
-        {/* Hero Showcase Section */}
+        {/* High-Impact Special Offer Showcase Banner */}
         {selectedCategory === 'Tous' && !searchTerm && (
-          <section className="relative overflow-hidden bg-gradient-to-br from-brand-navy via-slate-900 to-brand-navy text-white py-10 md:py-16 px-4 sm:px-6 lg:px-8 shadow-inner">
-            <div className="absolute -top-24 -right-24 w-96 h-96 bg-brand-orange/20 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
-
-            <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 items-center relative z-10">
-              <div className="space-y-4 text-center lg:text-left">
-                
-                {/* Slogan Badge */}
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-orange/20 border border-brand-orange/40 text-brand-orange font-extrabold text-xs sm:text-sm shadow-md animate-pulse">
-                  <Sparkles className="w-4 h-4" />
-                  <span>{t.heroBadge}</span>
-                </div>
-
-                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight">
-                  {t.heroTitlePrefix}<span className="text-brand-orange">{t.heroTitleSuffix}</span>
-                </h1>
-
-                <p className="text-sm sm:text-base text-slate-300 max-w-xl mx-auto lg:mx-0 leading-relaxed font-normal">
-                  {t.heroDesc}
-                </p>
-
-                {/* Badges */}
-                <div className="pt-2 flex flex-wrap items-center justify-center lg:justify-start gap-3 sm:gap-4 text-xs font-semibold text-slate-200">
-                  <div className="flex items-center gap-1.5 bg-slate-800/80 px-3.5 py-2 rounded-xl border border-slate-700">
-                    <Truck className="w-4 h-4 text-brand-orange" />
-                    <span>{t.footerNotice1}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 bg-slate-800/80 px-3.5 py-2 rounded-xl border border-slate-700">
-                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                    <span>{t.codNotice}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Banner Card Preview */}
-              <div className="hidden lg:block relative">
-                <div className="relative mx-auto max-w-md bg-white/10 backdrop-blur-md p-6 rounded-3xl border border-white/20 shadow-2xl">
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-xs font-extrabold uppercase tracking-widest text-brand-orange flex items-center gap-1">
-                      <Flame className="w-4 h-4" /> {lang === 'ar' ? 'عرض خاص' : 'Offre Spéciale'}
-                    </span>
-                    <span className="bg-emerald-500/20 text-emerald-300 text-[11px] font-bold px-2.5 py-0.5 rounded-full border border-emerald-500/30">
-                      {t.inStock}
-                    </span>
-                  </div>
-
-                  <img
-                    src="https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&w=800&q=80"
-                    alt="Offre Spéciale"
-                    className="w-full h-52 object-cover rounded-2xl mb-4 shadow-md"
-                  />
-
-                  <h3 className="font-extrabold text-lg text-white">
-                    {lang === 'ar' ? 'سماعات لاسلكية عازلة للضوضاء Pro' : 'Écouteurs Pro Active Noise Cancelling'}
-                  </h3>
-                  <div className="flex items-baseline justify-between mt-2">
-                    <span className="text-2xl font-black text-brand-orange">5 800 DA</span>
-                    <span className="text-xs text-slate-400 line-through">7 500 DA</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
+          <SpecialOfferBanner
+            offer={specialOffer}
+            onQuickView={setQuickViewProduct}
+            onBuyNow={handleBuyNow}
+            lang={lang}
+          />
         )}
 
         {/* Catalog Section */}
@@ -339,6 +289,7 @@ export default function App() {
             {/* Quick Filter Reset */}
             {(selectedCategory !== 'Tous' || searchTerm) && (
               <button
+                type="button"
                 onClick={() => { setSelectedCategory('Tous'); setSearchTerm(''); }}
                 className="text-xs font-bold text-brand-orange hover:underline self-start sm:self-auto"
               >
@@ -370,6 +321,7 @@ export default function App() {
                 {t.tryAnotherKeyword}
               </p>
               <button
+                type="button"
                 onClick={() => { setSelectedCategory('Tous'); setSearchTerm(''); }}
                 className="bg-brand-orange hover:bg-brand-orange-hover text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow"
               >
@@ -424,6 +376,8 @@ export default function App() {
           onAddProduct={handleAddProduct}
           onDeleteProduct={handleDeleteProduct}
           onResetProducts={handleResetProducts}
+          specialOffer={specialOffer}
+          onUpdateSpecialOffer={handleUpdateSpecialOffer}
         />
       )}
 

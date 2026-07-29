@@ -1,0 +1,257 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  Flame, 
+  Clock, 
+  ShoppingBag, 
+  Eye, 
+  CheckCircle2, 
+  Truck, 
+  ShieldCheck, 
+  Sparkles,
+  ChevronLeft,
+  ChevronRight,
+  Zap
+} from 'lucide-react';
+import { formatPrice } from '../utils/formatters';
+import { TRANSLATIONS } from '../data/translations';
+
+export default function SpecialOfferBanner({ offer, onQuickView, onBuyNow, lang = 'fr' }) {
+  const t = TRANSLATIONS[lang] || TRANSLATIONS.fr;
+
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [timeLeft, setTimeLeft] = useState({ hours: 14, minutes: 35, seconds: 22 });
+
+  if (!offer || !offer.enabled) return null;
+
+  const images = (offer.images && offer.images.length > 0)
+    ? offer.images
+    : [offer.image || "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&w=800&q=80"];
+
+  // Countdown timer ticking effect
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev.seconds > 0) return { ...prev, seconds: prev.seconds - 1 };
+        if (prev.minutes > 0) return { ...prev, minutes: 59, seconds: 59 };
+        if (prev.hours > 0) return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
+        return { hours: 23, minutes: 59, seconds: 59 }; // Reset loop
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Auto-play slideshow every 3.5 seconds
+  useEffect(() => {
+    if (images.length <= 1) return;
+    const interval = setInterval(() => {
+      setActiveImageIndex((prev) => (prev + 1) % images.length);
+    }, 3500);
+    return () => clearInterval(interval);
+  }, [images.length]);
+
+  const discountPercent = offer.oldPrice 
+    ? Math.round(((offer.oldPrice - offer.price) / offer.oldPrice) * 100)
+    : null;
+
+  const titleText = (lang === 'ar' && offer.titleAr) ? offer.titleAr : offer.title;
+  const descText = (lang === 'ar' && offer.descriptionAr) ? offer.descriptionAr : offer.description;
+
+  const handleNextImg = () => {
+    setActiveImageIndex((prev) => (prev + 1) % images.length);
+  };
+
+  const handlePrevImg = () => {
+    setActiveImageIndex((prev) => (prev - 1 + images.length) % images.length);
+  };
+
+  const offerProductObj = {
+    id: offer.productId || 'special-offer-item',
+    title: offer.title,
+    titleAr: offer.titleAr,
+    price: offer.price,
+    oldPrice: offer.oldPrice,
+    category: offer.category || 'High-Tech',
+    description: offer.description,
+    descriptionAr: offer.descriptionAr,
+    image: images[0],
+    images: images,
+    inStock: true,
+    badge: offer.tagline || 'Offre Spéciale'
+  };
+
+  return (
+    <section className="relative overflow-hidden bg-gradient-to-br from-brand-navy via-slate-900 to-brand-navy text-white py-10 md:py-14 px-4 sm:px-6 lg:px-8 border-b-4 border-brand-orange shadow-2xl">
+      {/* Background Animated Glow Effects */}
+      <div className="absolute -top-32 -right-32 w-96 h-96 bg-brand-orange/25 rounded-full blur-3xl pointer-events-none animate-pulse" />
+      <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-sky-500/20 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
+        
+        {/* Left Info & Timer (7 cols) */}
+        <div className="lg:col-span-7 space-y-4 text-center lg:text-left">
+          
+          {/* Badges Bar */}
+          <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2.5">
+            <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-brand-orange text-white font-black text-xs uppercase tracking-wider shadow-lg animate-bounce">
+              <Zap className="w-4 h-4 fill-white" />
+              {offer.tagline || "Vente Flash ⚡"}
+            </span>
+
+            {offer.seasonBadge && (
+              <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/20 text-slate-200 font-bold text-xs">
+                <Sparkles className="w-3.5 h-3.5 text-brand-orange" />
+                <span>{offer.seasonBadge}</span>
+              </span>
+            )}
+          </div>
+
+          {/* Main Title */}
+          <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-snug">
+            {titleText}
+          </h2>
+
+          <p className="text-xs sm:text-sm text-slate-300 max-w-xl mx-auto lg:mx-0 leading-relaxed font-normal">
+            {descText}
+          </p>
+
+          {/* Price & Discount Display */}
+          <div className="flex items-center justify-center lg:justify-start gap-4 pt-1">
+            <div className="bg-white/10 backdrop-blur-md border border-white/20 px-4 py-2 rounded-2xl flex items-baseline gap-3 shadow-lg">
+              <span className="text-xs text-slate-300 font-semibold">{t.price}:</span>
+              <span className="text-2xl sm:text-3xl font-black text-brand-orange">
+                {formatPrice(offer.price)}
+              </span>
+              {offer.oldPrice && (
+                <span className="text-sm text-slate-400 line-through font-semibold">
+                  {formatPrice(offer.oldPrice)}
+                </span>
+              )}
+            </div>
+
+            {discountPercent && (
+              <span className="bg-red-600 text-white text-xs font-black px-3 py-2 rounded-2xl shadow-md">
+                -{discountPercent}% OFF
+              </span>
+            )}
+          </div>
+
+          {/* Dynamic Countdown Timer */}
+          <div className="pt-2">
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 flex items-center justify-center lg:justify-start gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-brand-orange" />
+              <span>{lang === 'ar' ? 'ينتهي العرض الخاص خلال:' : 'L\'offre spéciale se termine dans:'}</span>
+            </p>
+
+            <div className="flex items-center justify-center lg:justify-start gap-2 text-center">
+              <div className="bg-brand-navy border border-slate-700 px-3 py-2 rounded-xl shadow-md min-w-[54px]">
+                <span className="text-lg sm:text-2xl font-black text-white block">
+                  {String(timeLeft.hours).padStart(2, '0')}
+                </span>
+                <span className="text-[9px] font-bold text-slate-400 uppercase">{lang === 'ar' ? 'ساعة' : 'Heures'}</span>
+              </div>
+              <span className="text-xl font-bold text-brand-orange">:</span>
+
+              <div className="bg-brand-navy border border-slate-700 px-3 py-2 rounded-xl shadow-md min-w-[54px]">
+                <span className="text-lg sm:text-2xl font-black text-white block">
+                  {String(timeLeft.minutes).padStart(2, '0')}
+                </span>
+                <span className="text-[9px] font-bold text-slate-400 uppercase">{lang === 'ar' ? 'دقيقة' : 'Min'}</span>
+              </div>
+              <span className="text-xl font-bold text-brand-orange">:</span>
+
+              <div className="bg-brand-navy border border-slate-700 px-3 py-2 rounded-xl shadow-md min-w-[54px]">
+                <span className="text-lg sm:text-2xl font-black text-white block">
+                  {String(timeLeft.seconds).padStart(2, '0')}
+                </span>
+                <span className="text-[9px] font-bold text-slate-400 uppercase">{lang === 'ar' ? 'ثانية' : 'Sec'}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Action CTAs */}
+          <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 pt-4">
+            <button
+              type="button"
+              onClick={() => onBuyNow(offerProductObj, 1)}
+              className="w-full sm:w-auto bg-brand-orange hover:bg-brand-orange-hover text-white py-3.5 px-6 rounded-2xl font-extrabold text-sm shadow-xl hover:shadow-glow transition-all active:scale-95 flex items-center justify-center gap-2"
+            >
+              <ShoppingBag className="w-5 h-5" />
+              <span>{lang === 'ar' ? 'استفد من العرض الخاص الآن' : 'Profiter de l\'Offre Spéciale'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onQuickView(offerProductObj)}
+              className="w-full sm:w-auto bg-white/10 hover:bg-white/20 text-white border border-white/20 py-3.5 px-5 rounded-2xl font-bold text-xs transition-all flex items-center justify-center gap-2"
+            >
+              <Eye className="w-4 h-4 text-brand-orange" />
+              <span>{t.quickView}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Right Multi-Photo Interactive Gallery (5 cols) */}
+        <div className="lg:col-span-5 relative">
+          <div className="relative mx-auto max-w-md bg-white/10 backdrop-blur-md p-4 sm:p-5 rounded-3xl border border-white/20 shadow-2xl group">
+            
+            {/* Main Carousel Active Image */}
+            <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-slate-900/60 mb-3 border border-white/10">
+              <img
+                src={images[activeImageIndex]}
+                alt={titleText}
+                className="w-full h-full object-cover transition-all duration-500 group-hover:scale-105"
+              />
+
+              {/* Prev / Next Arrows if multi-images */}
+              {images.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handlePrevImg}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-brand-navy/80 hover:bg-brand-orange text-white p-2 rounded-full backdrop-blur-md transition-colors shadow"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleNextImg}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-brand-navy/80 hover:bg-brand-orange text-white p-2 rounded-full backdrop-blur-md transition-colors shadow"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </>
+              )}
+
+              {/* Image Count Badge */}
+              <span className="absolute bottom-2 right-2 bg-brand-navy/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow">
+                {activeImageIndex + 1} / {images.length} {t.photosCount}
+              </span>
+            </div>
+
+            {/* Thumbnail Navigation Selector (At least 3-4 photos) */}
+            {images.length > 1 && (
+              <div className="flex items-center justify-center gap-2 overflow-x-auto no-scrollbar py-1">
+                {images.map((img, idx) => (
+                  <button
+                    type="button"
+                    key={idx}
+                    onClick={() => setActiveImageIndex(idx)}
+                    className={`w-14 h-14 rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 ${
+                      activeImageIndex === idx
+                        ? 'border-brand-orange shadow-lg scale-105'
+                        : 'border-white/20 opacity-50 hover:opacity-100'
+                    }`}
+                  >
+                    <img src={img} alt={`Offre Vue ${idx + 1}`} className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+      </div>
+    </section>
+  );
+}
