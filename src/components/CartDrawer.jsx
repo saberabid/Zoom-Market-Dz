@@ -11,7 +11,11 @@ import {
   AlertCircle,
   MapPin,
   User,
-  Phone
+  Phone,
+  ArrowRight,
+  ArrowLeft,
+  ShieldCheck,
+  CheckCircle2
 } from 'lucide-react';
 import { WILAYAS } from '../data/wilayas';
 import { formatPrice, validateDZPhone } from '../utils/formatters';
@@ -32,6 +36,9 @@ export default function CartDrawer({
 }) {
   const t = TRANSLATIONS[lang] || TRANSLATIONS.fr;
 
+  // Checkout Step: 1 = Cart Review, 2 = Shipping & Confirmation
+  const [checkoutStep, setCheckoutStep] = useState(1);
+
   const [selectedWilayaCode, setSelectedWilayaCode] = useState('16'); // Default 16 - Alger
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
@@ -49,16 +56,20 @@ export default function CartDrawer({
   const subtotal = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   const total = subtotal + shippingFee;
 
-  // Validate form fields
+  // Validate form fields for Step 2
   const validateForm = () => {
     const errs = {};
-    if (!fullName.trim()) errs.fullName = lang === 'ar' ? 'الاسم واللقب مطلوب' : 'Le nom et prénom sont obligatoires.';
-    if (!phone.trim()) {
-      errs.phone = lang === 'ar' ? 'رقم الهاتف مطلوب' : 'Le numéro de téléphone est obligatoire.';
-    } else if (!validateDZPhone(phone)) {
-      errs.phone = lang === 'ar' ? 'رقم غير صحيح (05/06/07 + 8 أرقام)' : 'Numéro invalide. Ex: 0550123456 (05, 06 ou 07 + 8 chiffres).';
+    if (!fullName.trim()) {
+      errs.fullName = lang === 'ar' ? 'يرجى كتابة الاسم واللقب' : 'Le nom et prénom sont obligatoires.';
     }
-    if (!address.trim()) errs.address = lang === 'ar' ? 'عنوان التوصيل مطلوب' : 'L\'adresse de livraison est obligatoire.';
+    if (!phone.trim()) {
+      errs.phone = lang === 'ar' ? 'رقم الهاتف مطلوب لتأكيد الطلب' : 'Le numéro de téléphone est obligatoire.';
+    } else if (!validateDZPhone(phone)) {
+      errs.phone = lang === 'ar' ? 'رقم غير صحيح (05/06/07 + 8 أرقام)' : 'Numéro invalide (05, 06 ou 07 + 8 chiffres).';
+    }
+    if (!address.trim()) {
+      errs.address = lang === 'ar' ? 'يرجى تحديد البلدية والعنوان بالتفصيل' : 'La commune et adresse de livraison sont obligatoires.';
+    }
 
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -66,7 +77,7 @@ export default function CartDrawer({
 
   // Handle Submit Order via EmailJS / FormSubmit + Local Storage Order Recording
   const handleSubmitOrder = async (e) => {
-    e.preventDefault();
+    e?.preventDefault?.();
     if (cartItems.length === 0) return;
     if (!validateForm()) return;
 
@@ -104,6 +115,7 @@ export default function CartDrawer({
       setAddress('');
       setNotes('');
       setErrors({});
+      setCheckoutStep(1);
     } catch (err) {
       console.error('Order error:', err);
       setLoading(false);
@@ -112,14 +124,14 @@ export default function CartDrawer({
 
   const handleWhatsAppOrder = () => {
     if (cartItems.length === 0) return;
-    if (!validateForm()) return;
 
+    // If on step 1, proceed with current customer info or open directly
     const orderData = {
       customer: {
-        fullName: fullName.trim(),
-        phone: phone.trim(),
+        fullName: fullName.trim() || 'Client Zoom Market',
+        phone: phone.trim() || 'Non renseigné',
         wilaya: currentWilaya.name,
-        address: address.trim(),
+        address: address.trim() || 'À confirmer par WhatsApp',
         notes: notes.trim()
       },
       items: cartItems,
@@ -140,119 +152,165 @@ export default function CartDrawer({
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden bg-brand-navy/60 backdrop-blur-sm animate-fadeIn">
+      {/* Backdrop overlay */}
       <div 
         className="absolute inset-0" 
         onClick={onClose} 
       />
 
-      <div className={`absolute inset-y-0 ${lang === 'ar' ? 'left-0 pr-10' : 'right-0 pl-10'} max-w-full flex`}>
-        <div className="w-screen max-w-lg bg-white dark:bg-slate-900 shadow-2xl flex flex-col justify-between border-l border-slate-200 dark:border-slate-800">
-          
-          {/* Drawer Header */}
-          <div className="p-5 bg-brand-navy text-white flex items-center justify-between shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-brand-orange text-white rounded-xl shadow-md">
-                <ShoppingBag className="w-5 h-5" />
-              </div>
-              <div>
-                <h2 className="font-extrabold text-lg leading-tight">{t.myCart}</h2>
-                <p className="text-xs text-slate-300">
-                  {cartItems.length} {t.selectedArticles}
-                </p>
-              </div>
+      {/* Drawer Container (100% width on mobile without clipping, max-w-lg on desktop) */}
+      <div className={`fixed inset-y-0 ${lang === 'ar' ? 'left-0' : 'right-0'} w-full sm:max-w-lg bg-white dark:bg-slate-900 shadow-2xl flex flex-col justify-between z-50 overflow-hidden`}>
+        
+        {/* Top Header */}
+        <div className="p-4 sm:p-5 bg-brand-navy text-white flex items-center justify-between shadow-sm flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-brand-orange text-white rounded-xl shadow-md">
+              <ShoppingBag className="w-5 h-5" />
             </div>
-
-            <button
-              onClick={onClose}
-              className="p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-full transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div>
+              <h2 className="font-extrabold text-base sm:text-lg leading-tight">{t.myCart}</h2>
+              <p className="text-xs text-slate-300">
+                {cartItems.length} {t.selectedArticles}
+              </p>
+            </div>
           </div>
 
-          {/* Drawer Body */}
-          <div className="flex-1 overflow-y-auto p-5 space-y-6">
-            {cartItems.length === 0 ? (
-              <div className="text-center py-16 px-4 flex flex-col items-center justify-center">
-                <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-400 mb-4">
-                  <ShoppingBag className="w-10 h-10 stroke-[1.5]" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-1">
-                  {t.emptyCart}
-                </h3>
-                <p className="text-xs text-slate-500 max-w-xs mb-6">
-                  {t.emptyCartDesc}
-                </p>
-                <button
-                  onClick={onClose}
-                  className="bg-brand-orange hover:bg-brand-orange-hover text-white px-6 py-2.5 rounded-xl font-bold text-xs shadow-md transition-all"
-                >
-                  {t.exploreProducts}
-                </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-full transition-colors active:scale-95"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Step Progress Indicators */}
+        {cartItems.length > 0 && (
+          <div className="bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700/80 px-4 py-2 flex items-center justify-between text-xs font-bold flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => setCheckoutStep(1)}
+              className={`flex items-center gap-1.5 py-1 px-3 rounded-lg transition-all ${
+                checkoutStep === 1
+                  ? 'bg-brand-orange text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-brand-orange'
+              }`}
+            >
+              <span>{t.stepCart}</span>
+              {checkoutStep === 2 && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
+            </button>
+
+            <span className="text-slate-400 font-normal">→</span>
+
+            <button
+              type="button"
+              onClick={() => setCheckoutStep(2)}
+              className={`flex items-center gap-1.5 py-1 px-3 rounded-lg transition-all ${
+                checkoutStep === 2
+                  ? 'bg-brand-orange text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-brand-orange'
+              }`}
+            >
+              <Truck className="w-3.5 h-3.5" />
+              <span>{t.stepShipping}</span>
+            </button>
+          </div>
+        )}
+
+        {/* Drawer Scrollable Content */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+          
+          {cartItems.length === 0 ? (
+            <div className="text-center py-16 px-4 flex flex-col items-center justify-center">
+              <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-400 mb-4">
+                <ShoppingBag className="w-10 h-10 stroke-[1.5]" />
               </div>
-            ) : (
-              <>
-                {/* Product List */}
-                <div className="space-y-3">
+              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-1">
+                {t.emptyCart}
+              </h3>
+              <p className="text-xs text-slate-500 max-w-xs mb-6">
+                {t.emptyCartDesc}
+              </p>
+              <button
+                type="button"
+                onClick={onClose}
+                className="bg-brand-orange hover:bg-brand-orange-hover text-white px-6 py-2.5 rounded-xl font-bold text-xs shadow-md transition-all active:scale-95"
+              >
+                {t.exploreProducts}
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* STEP 1: CART ITEMS REVIEW */}
+              {checkoutStep === 1 && (
+                <div className="space-y-4 animate-fadeIn">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                      {t.selectedArticles}
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      {t.selectedArticles} ({cartItems.length})
                     </span>
                     <button
+                      type="button"
                       onClick={onClearCart}
-                      className="text-xs font-semibold text-amber-600 hover:text-amber-700 flex items-center gap-1"
+                      className="text-xs font-semibold text-rose-500 hover:text-rose-600 flex items-center gap-1 active:scale-95"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       {t.clearCart}
                     </button>
                   </div>
 
-                  <div className="divide-y divide-slate-100 dark:divide-slate-800/80 max-h-56 overflow-y-auto pr-1">
+                  {/* Items List */}
+                  <div className="divide-y divide-slate-100 dark:divide-slate-800 space-y-2">
                     {cartItems.map((item) => {
                       const itemTitle = (lang === 'ar' && item.titleAr) ? item.titleAr : item.title;
                       return (
-                        <div key={item.id} className="py-3 flex items-center justify-between gap-3">
+                        <div key={item.id} className="pt-2 pb-3 flex items-center justify-between gap-3">
                           <img
                             src={item.images ? item.images[0] : item.image}
                             alt={itemTitle}
-                            className="w-14 h-14 object-cover rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex-shrink-0"
+                            className="w-16 h-16 object-cover rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex-shrink-0 shadow-sm"
                           />
                           <div className="flex-1 min-w-0">
-                            <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                            <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
                               {itemTitle}
                             </h4>
                             <p className="text-xs text-brand-orange font-extrabold mt-0.5">
                               {formatPrice(item.price)}
                             </p>
-                            <div className="flex items-center gap-2 mt-1.5">
+                            
+                            {/* Quantity Controls */}
+                            <div className="flex items-center gap-2 mt-2">
                               <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 border border-slate-200 dark:border-slate-700">
                                 <button
+                                  type="button"
                                   onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
-                                  className="p-1 text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                                  className="p-1.5 text-slate-500 hover:text-slate-900 dark:hover:text-white active:scale-90"
                                 >
                                   <Minus className="w-3 h-3" />
                                 </button>
-                                <span className="w-6 text-center text-xs font-bold text-slate-900 dark:text-white">
+                                <span className="w-7 text-center text-xs font-black text-slate-900 dark:text-white">
                                   {item.quantity}
                                 </span>
                                 <button
+                                  type="button"
                                   onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-                                  className="p-1 text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                                  className="p-1.5 text-slate-500 hover:text-slate-900 dark:hover:text-white active:scale-90"
                                 >
                                   <Plus className="w-3 h-3" />
                                 </button>
                               </div>
                             </div>
                           </div>
-                          <div className="text-right flex flex-col items-end justify-between h-14">
+
+                          <div className="text-right flex flex-col items-end justify-between h-16 flex-shrink-0">
                             <button
+                              type="button"
                               onClick={() => onRemoveItem(item.id)}
-                              className="text-slate-400 hover:text-red-500 p-1"
+                              className="text-slate-400 hover:text-red-500 p-1 active:scale-90"
                               title="Supprimer"
                             >
                               <X className="w-4 h-4" />
                             </button>
-                            <span className="text-xs font-black text-slate-900 dark:text-white">
+                            <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
                               {formatPrice(item.price * item.quantity)}
                             </span>
                           </div>
@@ -260,16 +318,40 @@ export default function CartDrawer({
                       );
                     })}
                   </div>
+
+                  {/* Trust Banner */}
+                  <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 rounded-xl flex items-center gap-2.5 text-xs text-emerald-800 dark:text-emerald-300">
+                    <ShieldCheck className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+                    <div>
+                      <span className="font-extrabold block">{t.codNotice}</span>
+                      <span className="text-[11px] text-emerald-700/80 dark:text-emerald-400 font-normal">
+                        {t.shipping69}
+                      </span>
+                    </div>
+                  </div>
                 </div>
+              )}
 
-                {/* Form Section */}
-                <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
-                  <h3 className="text-sm font-extrabold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                    <Truck className="w-4 h-4 text-brand-orange" />
-                    {t.shippingInfo}
-                  </h3>
+              {/* STEP 2: EXPRESS SHIPPING FORM */}
+              {checkoutStep === 2 && (
+                <div className="space-y-4 animate-fadeIn">
+                  
+                  <div className="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => setCheckoutStep(1)}
+                      className="text-xs font-bold text-brand-orange hover:underline flex items-center gap-1 active:scale-95"
+                    >
+                      {lang === 'ar' ? <ArrowRight className="w-3.5 h-3.5" /> : <ArrowLeft className="w-3.5 h-3.5" />}
+                      <span>{t.backToCart}</span>
+                    </button>
 
-                  <form onSubmit={handleSubmitOrder} className="space-y-3">
+                    <span className="text-xs font-semibold text-slate-500">
+                      {cartItems.length} {t.selectedArticles}
+                    </span>
+                  </div>
+
+                  <form onSubmit={handleSubmitOrder} className="space-y-3.5">
                     {/* Nom & Prénom */}
                     <div>
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -281,14 +363,14 @@ export default function CartDrawer({
                           value={fullName}
                           onChange={(e) => setFullName(e.target.value)}
                           placeholder={t.fullNamePlaceholder}
-                          className={`w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border ${
+                          className={`w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs sm:text-sm border ${
                             errors.fullName ? 'border-red-500' : 'border-slate-200 dark:border-slate-700'
                           } text-slate-900 dark:text-white focus:border-brand-orange focus:outline-none`}
                         />
-                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                       </div>
                       {errors.fullName && (
-                        <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1">
+                        <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-semibold">
                           <AlertCircle className="w-3 h-3" /> {errors.fullName}
                         </p>
                       )}
@@ -305,14 +387,17 @@ export default function CartDrawer({
                           value={phone}
                           onChange={(e) => setPhone(e.target.value)}
                           placeholder={t.phonePlaceholder}
-                          className={`w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border ${
+                          className={`w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs sm:text-sm border ${
                             errors.phone ? 'border-red-500' : 'border-slate-200 dark:border-slate-700'
                           } text-slate-900 dark:text-white focus:border-brand-orange focus:outline-none`}
                         />
-                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                       </div>
+                      <p className="text-[10px] text-slate-400 mt-1">
+                        {t.phoneHint}
+                      </p>
                       {errors.phone && (
-                        <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1">
+                        <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-semibold">
                           <AlertCircle className="w-3 h-3" /> {errors.phone}
                         </p>
                       )}
@@ -327,19 +412,19 @@ export default function CartDrawer({
                         <select
                           value={selectedWilayaCode}
                           onChange={(e) => setSelectedWilayaCode(e.target.value)}
-                          className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-brand-orange focus:outline-none appearance-none cursor-pointer"
+                          className="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs sm:text-sm font-bold border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-brand-orange focus:outline-none appearance-none cursor-pointer"
                         >
                           {WILAYAS.map((w) => (
                             <option key={w.code} value={w.code} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
-                              {w.name} ({formatPrice(w.fee)})
+                              {w.name} — ({formatPrice(w.fee)} livraison)
                             </option>
                           ))}
                         </select>
-                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-orange" />
                       </div>
                     </div>
 
-                    {/* Adresse */}
+                    {/* Commune & Adresse */}
                     <div>
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                         {t.address} <span className="text-brand-orange">*</span>
@@ -349,12 +434,12 @@ export default function CartDrawer({
                         onChange={(e) => setAddress(e.target.value)}
                         rows={2}
                         placeholder={t.addressPlaceholder}
-                        className={`w-full p-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border ${
+                        className={`w-full p-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs sm:text-sm border ${
                           errors.address ? 'border-red-500' : 'border-slate-200 dark:border-slate-700'
                         } text-slate-900 dark:text-white focus:border-brand-orange focus:outline-none`}
                       />
                       {errors.address && (
-                        <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1">
+                        <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-semibold">
                           <AlertCircle className="w-3 h-3" /> {errors.address}
                         </p>
                       )}
@@ -375,59 +460,85 @@ export default function CartDrawer({
                     </div>
                   </form>
                 </div>
-              </>
-            )}
-          </div>
+              )}
+            </>
+          )}
+        </div>
 
-          {/* Drawer Footer */}
-          {cartItems.length > 0 && (
-            <div className="p-5 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-800 space-y-3">
-              <div className="space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
-                <div className="flex justify-between">
-                  <span>{t.subtotal}</span>
-                  <span className="font-semibold text-slate-900 dark:text-white">{formatPrice(subtotal)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>{t.shippingFee}</span>
-                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatPrice(shippingFee)}</span>
-                </div>
-                <div className="flex justify-between text-base font-extrabold text-slate-900 dark:text-white pt-2 border-t border-slate-200 dark:border-slate-700">
-                  <span>{t.totalToPay}</span>
-                  <span className="text-brand-orange">{formatPrice(total)}</span>
-                </div>
+        {/* Drawer Sticky Footer with Price Breakdown & Action CTAs */}
+        {cartItems.length > 0 && (
+          <div className="p-4 sm:p-5 bg-slate-50 dark:bg-slate-800/90 border-t border-slate-200 dark:border-slate-800 space-y-3 flex-shrink-0 shadow-lg">
+            
+            {/* Price Calculations */}
+            <div className="space-y-1 text-xs text-slate-600 dark:text-slate-300">
+              <div className="flex justify-between">
+                <span>{t.subtotal}</span>
+                <span className="font-bold text-slate-900 dark:text-white">{formatPrice(subtotal)}</span>
               </div>
-
-              {/* Action Buttons */}
-              <div className="space-y-2 pt-2">
-                <button
-                  type="button"
-                  onClick={handleSubmitOrder}
-                  disabled={loading}
-                  className="w-full bg-brand-orange hover:bg-brand-orange-hover text-white py-3.5 px-4 rounded-xl font-extrabold text-sm shadow-lg hover:shadow-glow transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
-                >
-                  {loading ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4" />
-                      <span>{t.confirmOrder} ({formatPrice(total)})</span>
-                    </>
-                  )}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleWhatsAppOrder}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 px-4 rounded-xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 active:scale-95"
-                >
-                  <MessageSquare className="w-4 h-4" />
-                  <span>{t.orderViaWhatsApp}</span>
-                </button>
+              <div className="flex justify-between">
+                <span>{t.shippingFee} ({currentWilaya.name}) :</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatPrice(shippingFee)}</span>
+              </div>
+              <div className="flex justify-between text-sm sm:text-base font-black text-slate-900 dark:text-white pt-2 border-t border-slate-200 dark:border-slate-700">
+                <span>{t.totalToPay}</span>
+                <span className="text-brand-orange text-base sm:text-lg">{formatPrice(total)}</span>
               </div>
             </div>
-          )}
 
-        </div>
+            {/* Actions according to step */}
+            <div className="space-y-2 pt-1">
+              {checkoutStep === 1 ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setCheckoutStep(2)}
+                    className="w-full bg-brand-orange hover:bg-brand-orange-hover text-white py-3.5 px-4 rounded-2xl font-black text-sm shadow-xl hover:shadow-glow transition-all flex items-center justify-center gap-2 active:scale-95"
+                  >
+                    <span>{t.proceedToCheckout} ({formatPrice(total)})</span>
+                    {lang === 'ar' ? <ArrowLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleWhatsAppOrder}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 px-4 rounded-xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 active:scale-95"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    <span>{t.orderViaWhatsApp}</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleSubmitOrder}
+                    disabled={loading}
+                    className="w-full bg-brand-orange hover:bg-brand-orange-hover text-white py-3.5 px-4 rounded-2xl font-black text-sm shadow-xl hover:shadow-glow transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
+                  >
+                    {loading ? (
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        <span>{t.confirmOrder} ({formatPrice(total)})</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleWhatsAppOrder}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 px-4 rounded-xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 active:scale-95"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    <span>{t.orderViaWhatsApp}</span>
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
