@@ -1,25 +1,24 @@
 import React from 'react';
-import { Home, Search, ShoppingBag, Globe, Lock, Unlock } from 'lucide-react';
+import { Home, Search, ShoppingBag, Globe, Sun, Moon, Package } from 'lucide-react';
 import { TRANSLATIONS } from '../data/translations';
 
 export default function MobileBottomNav({
   cartCount,
   onOpenCart,
-  onOpenAdminLogin,
   onOpenAdmin,
   isAdminLoggedIn,
   lang,
   setLang,
+  darkMode,
+  setDarkMode,
   onResetSearch
 }) {
   const t = TRANSLATIONS[lang] || TRANSLATIONS.fr;
 
   const handleSearchClick = (e) => {
     e.preventDefault();
-    // Scroll smoothly to top search area
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // Focus mobile search input field
     setTimeout(() => {
       const mobileInput = document.getElementById('mobile-search-input') || document.getElementById('desktop-search-input');
       if (mobileInput) {
@@ -40,7 +39,7 @@ export default function MobileBottomNav({
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-brand-navy/95 backdrop-blur-xl border-t border-slate-200/90 dark:border-slate-800 px-3 py-2 shadow-2xl transition-all">
       <div className="flex items-center justify-between text-slate-600 dark:text-slate-300 max-w-md mx-auto">
         
-        {/* Home Button */}
+        {/* 1. Home Button */}
         <button
           type="button"
           onClick={handleHomeClick}
@@ -50,7 +49,7 @@ export default function MobileBottomNav({
           <span className="text-[10px] font-extrabold leading-none">{lang === 'ar' ? 'الرئيسية' : 'Accueil'}</span>
         </button>
 
-        {/* Search button with auto-focus */}
+        {/* 2. Search button */}
         <button
           type="button"
           onClick={handleSearchClick}
@@ -60,7 +59,7 @@ export default function MobileBottomNav({
           <span className="text-[10px] font-bold leading-none">{lang === 'ar' ? 'بحث' : 'Recherche'}</span>
         </button>
 
-        {/* Floating Cart CTA Button */}
+        {/* 3. Floating Cart CTA Button */}
         <button
           type="button"
           onClick={onOpenCart}
@@ -74,34 +73,37 @@ export default function MobileBottomNav({
           )}
         </button>
 
-        {/* Language switch */}
+        {/* 4. Dark / Light Theme Toggle */}
         <button
           type="button"
-          onClick={() => setLang(lang === 'fr' ? 'ar' : 'fr')}
+          onClick={() => setDarkMode(!darkMode)}
           className="flex flex-col items-center justify-center gap-1 min-w-[56px] py-1 text-slate-700 dark:text-slate-300 hover:text-brand-orange transition-colors active:scale-95 touch-manipulation"
+          title={darkMode ? "Mode Clair" : "Mode Sombre"}
         >
-          <Globe className="w-5 h-5 text-brand-orange" />
-          <span className="text-[10px] font-extrabold leading-none">{lang === 'fr' ? 'العربية' : 'FR'}</span>
+          {darkMode ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5" />}
+          <span className="text-[10px] font-bold leading-none">{darkMode ? 'Clair' : 'Sombre'}</span>
         </button>
 
-        {/* Admin Lock / Unlock */}
-        <button
-          type="button"
-          onClick={() => {
-            if (isAdminLoggedIn) onOpenAdmin();
-            else onOpenAdminLogin();
-          }}
-          className="flex flex-col items-center justify-center gap-1 min-w-[56px] py-1 text-slate-700 dark:text-slate-300 hover:text-brand-navy dark:hover:text-white transition-colors active:scale-95 touch-manipulation"
-        >
-          {isAdminLoggedIn ? (
-            <Unlock className="w-5 h-5 text-emerald-500" />
-          ) : (
-            <Lock className="w-5 h-5 text-slate-400" />
-          )}
-          <span className="text-[10px] font-bold leading-none">
-            {isAdminLoggedIn ? (lang === 'ar' ? 'مشرف' : 'Admin') : (lang === 'ar' ? 'قفل' : 'Admin')}
-          </span>
-        </button>
+        {/* 5. Language Switch OR Admin Panel (if logged in) */}
+        {isAdminLoggedIn ? (
+          <button
+            type="button"
+            onClick={onOpenAdmin}
+            className="flex flex-col items-center justify-center gap-1 min-w-[56px] py-1 text-emerald-600 dark:text-emerald-400 font-extrabold transition-colors active:scale-95 touch-manipulation"
+          >
+            <Package className="w-5 h-5 animate-pulse" />
+            <span className="text-[10px] leading-none">Admin</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setLang(lang === 'fr' ? 'ar' : 'fr')}
+            className="flex flex-col items-center justify-center gap-1 min-w-[56px] py-1 text-slate-700 dark:text-slate-300 hover:text-brand-orange transition-colors active:scale-95 touch-manipulation"
+          >
+            <Globe className="w-5 h-5 text-brand-orange" />
+            <span className="text-[10px] font-extrabold leading-none">{lang === 'fr' ? 'العربية' : 'FR'}</span>
+          </button>
+        )}
 
       </div>
     </nav>

@@ -46,7 +46,7 @@ export default function App() {
   });
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
 
-  // Keyboard shortcut (Ctrl + Shift + A) to open Admin PIN login modal
+  // Stealth Triggers: (Ctrl + Shift + A) or URL hash `#admin`
   useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
@@ -54,8 +54,22 @@ export default function App() {
         setIsAdminLoginOpen(true);
       }
     };
+    const handleHashChange = () => {
+      if (window.location.hash === '#admin') {
+        setIsAdminLoginOpen(true);
+      }
+    };
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('hashchange', handleHashChange);
+    if (window.location.hash === '#admin') {
+      setIsAdminLoginOpen(true);
+    }
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('hashchange', handleHashChange);
+    };
   }, []);
 
   const handleAdminLoginSuccess = () => {
@@ -63,6 +77,10 @@ export default function App() {
     sessionStorage.setItem('zoom_market_admin_session', 'true');
     setIsAdminLoginOpen(false);
     setIsAdminOpen(true);
+    // Clear hash cleanly
+    if (window.location.hash === '#admin') {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
   };
 
   const handleAdminLogout = () => {
@@ -237,14 +255,8 @@ export default function App() {
         categories={CATEGORIES}
         cartCount={cartTotalItemsCount}
         onOpenCart={() => setIsCartOpen(true)}
-        onOpenAdmin={() => {
-          if (isAdminLoggedIn) setIsAdminOpen(true);
-          else setIsAdminLoginOpen(true);
-        }}
-        onOpenEmailConfig={() => {
-          if (isAdminLoggedIn) setIsEmailConfigOpen(true);
-          else setIsAdminLoginOpen(true);
-        }}
+        onOpenAdmin={() => setIsAdminOpen(true)}
+        onOpenEmailConfig={() => setIsEmailConfigOpen(true)}
         onOpenAdminLogin={() => setIsAdminLoginOpen(true)}
         isAdminLoggedIn={isAdminLoggedIn}
         onAdminLogout={handleAdminLogout}
@@ -404,11 +416,12 @@ export default function App() {
       <MobileBottomNav
         cartCount={cartTotalItemsCount}
         onOpenCart={() => setIsCartOpen(true)}
-        onOpenAdminLogin={() => setIsAdminLoginOpen(true)}
         onOpenAdmin={() => setIsAdminOpen(true)}
         isAdminLoggedIn={isAdminLoggedIn}
         lang={lang}
         setLang={setLang}
+        darkMode={darkMode}
+        setDarkMode={setDarkMode}
         onResetSearch={() => { setSelectedCategory('Tous'); setSearchTerm(''); }}
       />
 
@@ -420,10 +433,7 @@ export default function App() {
         }}
         storePhone={emailConfig.storePhone}
         recipientEmail={emailConfig.recipientEmail}
-        onOpenAdminLogin={() => {
-          if (isAdminLoggedIn) setIsAdminOpen(true);
-          else setIsAdminLoginOpen(true);
-        }}
+        onOpenAdminLogin={() => setIsAdminLoginOpen(true)}
         lang={lang}
       />
     </div>

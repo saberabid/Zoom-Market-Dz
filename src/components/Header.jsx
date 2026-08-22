@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Search, 
   ShoppingBag, 
@@ -12,7 +12,6 @@ import {
   PhoneCall,
   SlidersHorizontal,
   Globe,
-  Lock,
   Unlock,
   LogOut,
   Package
@@ -40,11 +39,29 @@ export default function Header({
   setLang
 }) {
   const t = TRANSLATIONS[lang] || TRANSLATIONS.fr;
+  const [logoTapCount, setLogoTapCount] = useState(0);
+
+  // Stealth Admin Trigger: 3 rapid taps on Logo opens Admin PIN modal
+  const handleLogoClick = () => {
+    setSearchTerm('');
+    setSelectedCategory('Tous');
+
+    setLogoTapCount((prev) => {
+      const next = prev + 1;
+      if (next >= 3) {
+        onOpenAdminLogin();
+        return 0;
+      }
+      return next;
+    });
+
+    setTimeout(() => setLogoTapCount(0), 1500);
+  };
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 dark:bg-brand-navy/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 transition-colors shadow-sm">
       
-      {/* Admin Logged-In Control Bar Banner */}
+      {/* Admin Logged-In Control Bar Banner (Only visible AFTER secret PIN login) */}
       {isAdminLoggedIn && (
         <div className="bg-emerald-700 text-white text-xs py-1.5 px-4 font-bold flex items-center justify-between shadow-md dir-ltr">
           <div className="flex items-center gap-2">
@@ -52,29 +69,29 @@ export default function Header({
             <span>Mode Administrateur Actif (Zoom Market Dz)</span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
               type="button"
               onClick={onOpenAdmin}
-              className="bg-white/20 hover:bg-white/30 text-white px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition-colors"
+              className="bg-white/20 hover:bg-white/30 text-white px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition-colors text-xs font-bold"
             >
               <Package className="w-3.5 h-3.5" />
-              <span>Gérer les Produits & Stocks</span>
+              <span>Gestion Magasin</span>
             </button>
 
             <button
               type="button"
               onClick={onOpenEmailConfig}
-              className="bg-white/20 hover:bg-white/30 text-white px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition-colors"
+              className="bg-white/20 hover:bg-white/30 text-white px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition-colors text-xs font-bold"
             >
               <Settings className="w-3.5 h-3.5" />
-              <span>Paramètres EmailJS / Tél</span>
+              <span className="hidden sm:inline">Paramètres</span>
             </button>
 
             <button
               type="button"
               onClick={onAdminLogout}
-              className="bg-red-800 hover:bg-red-900 text-white px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors"
+              className="bg-red-800 hover:bg-red-900 text-white px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors text-xs font-bold"
               title="Quitter le mode Administrateur"
             >
               <LogOut className="w-3.5 h-3.5" />
@@ -115,8 +132,8 @@ export default function Header({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
         <div className="flex items-center justify-between gap-4">
           
-          {/* Logo */}
-          <div onClick={() => { setSearchTerm(''); setSelectedCategory('Tous'); }}>
+          {/* Logo with Secret Triple-Tap Handler */}
+          <div onClick={handleLogoClick} className="cursor-pointer select-none">
             <Logo />
           </div>
 
@@ -158,8 +175,8 @@ export default function Header({
               <span>{lang === 'fr' ? 'العربية 🇩🇿' : 'Français 🇫🇷'}</span>
             </button>
 
-            {/* Admin Space Button */}
-            {isAdminLoggedIn ? (
+            {/* Admin Space Button (Only visible IF already logged in) */}
+            {isAdminLoggedIn && (
               <button
                 type="button"
                 onClick={onOpenAdmin}
@@ -168,15 +185,6 @@ export default function Header({
               >
                 <PlusCircle className="w-4 h-4" />
                 <span className="hidden sm:inline">Ajouter Produit</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={onOpenAdminLogin}
-                className="p-2 text-slate-400 hover:text-brand-navy dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors active:scale-95"
-                title="Accès Administrateur 🔒"
-              >
-                <Lock className="w-4 h-4" />
               </button>
             )}
 

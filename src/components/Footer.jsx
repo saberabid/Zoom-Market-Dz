@@ -1,6 +1,6 @@
 import React from 'react';
 import Logo from './Logo';
-import { Truck, ShieldCheck, PhoneCall, Mail, MapPin, Heart, Lock } from 'lucide-react';
+import { Truck, ShieldCheck, PhoneCall, Mail, MapPin } from 'lucide-react';
 import { TRANSLATIONS } from '../data/translations';
 
 export default function Footer({ onCategorySelect, storePhone, recipientEmail, onOpenAdminLogin, lang = 'fr' }) {
@@ -67,6 +67,7 @@ export default function Footer({ onCategorySelect, storePhone, recipientEmail, o
               {['High-Tech', 'Électronique', 'Mode & Habillement', 'Maison & Déco', 'Beauté & Santé'].map((cat) => (
                 <li key={cat}>
                   <button
+                    type="button"
                     onClick={() => onCategorySelect(cat)}
                     className="hover:text-brand-orange transition-colors"
                   >
@@ -109,21 +110,22 @@ export default function Footer({ onCategorySelect, storePhone, recipientEmail, o
           </div>
         </div>
 
-        {/* Bottom Copyright & Admin Login Link */}
+        {/* Bottom Copyright & Discreet Secret Trigger */}
         <div className="pt-8 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
           <p>© {new Date().getFullYear()} Zoom Market Dz. {t.allRightsReserved}</p>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <p className="flex items-center gap-1">
               {t.madeWithLove}
             </p>
-            <span className="text-slate-700">•</span>
+            {/* Secret Discreet Trigger Dot (Only known to the admin) */}
             <button
+              type="button"
               onClick={onOpenAdminLogin}
-              className="text-slate-500 hover:text-white transition-colors flex items-center gap-1 text-[11px]"
+              className="text-slate-700 hover:text-slate-500 cursor-default select-none transition-colors p-1"
+              title=""
             >
-              <Lock className="w-3 h-3 text-brand-orange" />
-              <span>Espace Admin 🔒</span>
+              •
             </button>
           </div>
         </div>
