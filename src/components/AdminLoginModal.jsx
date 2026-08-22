@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Lock, Key, ShieldCheck, AlertCircle, Check, Clock, ShieldAlert, Globe, Radio } from 'lucide-react';
+import { X, Lock, Key, ShieldCheck, AlertCircle, Check, Clock, ShieldAlert } from 'lucide-react';
 import { verifyAdminPin, changeAdminPin, getLockoutStatus } from '../utils/auth';
 import { verifyAdminGeoLocation } from '../utils/geoSecurity';
 
@@ -9,9 +9,9 @@ export default function AdminLoginModal({ isOpen, onClose, onLoginSuccess }) {
   const [isVerifying, setIsVerifying] = useState(false);
   const [lockoutInfo, setLockoutInfo] = useState(getLockoutStatus);
 
-  // Geo-Fencing State
-  const [geoChecking, setGeoChecking] = useState(true);
-  const [geoStatus, setGeoStatus] = useState(null);
+  // Security Check State
+  const [isAuthorized, setIsAuthorized] = useState(true);
+  const [isCheckingSecurity, setIsCheckingSecurity] = useState(true);
   
   // Change PIN mode
   const [isChangingPin, setIsChangingPin] = useState(false);
@@ -19,20 +19,19 @@ export default function AdminLoginModal({ isOpen, onClose, onLoginSuccess }) {
   const [newPinInput, setNewPinInput] = useState('');
   const [changeSuccess, setChangeSuccess] = useState(false);
 
-  // Run Geo-Fencing verification whenever modal is opened
   useEffect(() => {
     if (!isOpen) return;
 
     let isMounted = true;
-    setGeoChecking(true);
+    setIsCheckingSecurity(true);
     setError('');
 
     verifyAdminGeoLocation().then((result) => {
       if (isMounted) {
-        setGeoStatus(result);
-        setGeoChecking(false);
+        setIsAuthorized(result.allowed);
+        setIsCheckingSecurity(false);
         if (!result.allowed) {
-          setError(result.message);
+          setError(result.message || 'Accès non autorisé.');
         }
       }
     });
@@ -40,7 +39,6 @@ export default function AdminLoginModal({ isOpen, onClose, onLoginSuccess }) {
     return () => { isMounted = false; };
   }, [isOpen]);
 
-  // Check lockout status every second if locked
   useEffect(() => {
     if (!isOpen) return;
     setLockoutInfo(getLockoutStatus());
@@ -58,19 +56,16 @@ export default function AdminLoginModal({ isOpen, onClose, onLoginSuccess }) {
 
   if (!isOpen) return null;
 
-  const isGeoBlocked = geoStatus && !geoStatus.allowed;
-
   const handleLogin = async (e) => {
     e.preventDefault();
 
-    // Block if outside Algeria or on VPN
-    if (isGeoBlocked) {
-      setError(geoStatus.message);
+    if (!isAuthorized) {
+      setError('Accès non autorisé. (Code: 403-DENIED)');
       return;
     }
 
     if (!pin.trim()) {
-      setError('Veuillez saisir votre code PIN administrateur.');
+      setError('Veuillez saisir votre code PIN.');
       return;
     }
 
@@ -86,20 +81,20 @@ export default function AdminLoginModal({ isOpen, onClose, onLoginSuccess }) {
         setPin('');
         onLoginSuccess();
       } else {
-        setError(result.message || 'Code PIN incorrect.');
+        setError(result.message || 'Authentification échouée.');
         setLockoutInfo(getLockoutStatus());
       }
     } catch (err) {
       setIsVerifying(false);
-      setError('Erreur de validation de sécurité.');
+      setError('Erreur de validation.');
     }
   };
 
   const handleChangePin = async (e) => {
     e.preventDefault();
 
-    if (isGeoBlocked) {
-      setError(geoStatus.message);
+    if (!isAuthorized) {
+      setError('Action non autorisée.');
       return;
     }
 
@@ -112,13 +107,13 @@ export default function AdminLoginModal({ isOpen, onClose, onLoginSuccess }) {
     const verifyCurrent = await verifyAdminPin(currentPinInput);
     if (!verifyCurrent.success) {
       setIsVerifying(false);
-      setError('Le code PIN actuel est incorrect.');
+      setError('Code PIN actuel incorrect.');
       return;
     }
 
     if (newPinInput.length < 4) {
       setIsVerifying(false);
-      setError('Le nouveau code PIN doit comporter au moins 4 chiffres.');
+      setError('Le code PIN doit comporter au moins 4 caractères.');
       return;
     }
 
@@ -135,7 +130,7 @@ export default function AdminLoginModal({ isOpen, onClose, onLoginSuccess }) {
       }, 1500);
     } catch (err) {
       setIsVerifying(false);
-      setError(err.message || 'Erreur lors du changement de PIN.');
+      setError('Erreur lors du changement de PIN.');
     }
   };
 
@@ -152,62 +147,44 @@ export default function AdminLoginModal({ isOpen, onClose, onLoginSuccess }) {
           <X className="w-5 h-5" />
         </button>
 
-        {/* Lock Icon with Geo Indicator */}
+        {/* Lock Icon */}
         <div className={`w-16 h-16 ${
-          isGeoBlocked || lockoutInfo.isLocked
+          !isAuthorized || lockoutInfo.isLocked
             ? 'bg-red-500/10 text-red-500 border-red-500/30'
             : 'bg-brand-orange/10 text-brand-orange border-brand-orange/20'
         } rounded-full flex items-center justify-center mx-auto mb-4 border-2 shadow-inner`}>
-          {isGeoBlocked || lockoutInfo.isLocked ? <ShieldAlert className="w-8 h-8" /> : <Lock className="w-8 h-8" />}
+          {!isAuthorized || lockoutInfo.isLocked ? <ShieldAlert className="w-8 h-8" /> : <Lock className="w-8 h-8" />}
         </div>
 
         <h2 className="text-xl font-extrabold text-slate-900 dark:text-white mb-1">
-          Espace Administrateur Sécurisé 🔒
+          Espace Administrateur 🔒
         </h2>
-        
-        {/* Geo Status Badge */}
-        {geoChecking ? (
-          <p className="text-xs text-slate-500 flex items-center justify-center gap-1.5 mb-5">
-            <Radio className="w-3.5 h-3.5 text-brand-orange animate-pulse" />
-            <span>Vérification de la localisation géographique...</span>
-          </p>
-        ) : geoStatus?.allowed ? (
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-900 text-emerald-800 dark:text-emerald-300 text-[11px] font-bold mb-5 shadow-sm">
-            <Globe className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Connexion Sécurisée depuis l'Algérie 🇩🇿 (Sans VPN)</span>
-          </div>
-        ) : null}
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-5">
+          Authentification de session requise.
+        </p>
 
-        {/* Geo Block Alert Banner */}
-        {isGeoBlocked && (
-          <div className="mb-5 p-4 bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-300 rounded-2xl text-xs font-bold border-2 border-red-300 dark:border-red-800 text-left space-y-1.5 shadow-md">
-            <div className="flex items-center gap-2 text-red-800 dark:text-red-200 font-black text-sm">
-              <ShieldAlert className="w-5 h-5 flex-shrink-0 text-red-600" />
-              <span>Accès Géographiquement Bloqué 🚫</span>
-            </div>
-            <p className="text-[11px] font-normal leading-relaxed text-red-700 dark:text-red-300">
-              {geoStatus.message}
-            </p>
-            <p className="text-[10px] text-red-600 dark:text-red-400 pt-1 border-t border-red-200 dark:border-red-900 font-mono">
-              IP: {geoStatus.ip} | Pays: {geoStatus.countryName} ({geoStatus.countryCode})
-            </p>
+        {/* Generic Opaque Error Banner if Unauthorized */}
+        {!isAuthorized && !isCheckingSecurity && (
+          <div className="mb-4 p-3 bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300 rounded-xl text-xs font-bold flex items-center gap-2 text-left border border-red-200 dark:border-red-900">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <span>Accès non autorisé sur cet environnement. (Code: 403)</span>
           </div>
         )}
 
         {/* Lockout Warning Banner */}
-        {lockoutInfo.isLocked && !isGeoBlocked && (
+        {lockoutInfo.isLocked && isAuthorized && (
           <div className="mb-4 p-3.5 bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300 rounded-2xl text-xs font-bold border border-red-200 dark:border-red-900 flex items-center gap-2.5 text-left">
             <Clock className="w-5 h-5 flex-shrink-0 text-red-600" />
             <div>
               <p className="font-extrabold">Accès temporairement verrouillé</p>
               <p className="text-[11px] font-normal mt-0.5">
-                Temps restant : <strong>{lockoutInfo.remainingMinutes} min ({lockoutInfo.remainingSeconds}s)</strong>
+                Veuillez patienter : <strong>{lockoutInfo.remainingMinutes} min</strong>
               </p>
             </div>
           </div>
         )}
 
-        {error && !lockoutInfo.isLocked && !isGeoBlocked && (
+        {error && !lockoutInfo.isLocked && isAuthorized && (
           <div className="mb-4 p-3 bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300 rounded-xl text-xs font-bold flex items-center gap-2 text-left">
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
             <span>{error}</span>
@@ -217,7 +194,7 @@ export default function AdminLoginModal({ isOpen, onClose, onLoginSuccess }) {
         {changeSuccess && (
           <div className="mb-4 p-3 bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 rounded-xl text-xs font-bold flex items-center gap-2 text-left">
             <Check className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-            <span>Code PIN administrateur sécurisé et mis à jour !</span>
+            <span>Code PIN administrateur mis à jour !</span>
           </div>
         )}
 
@@ -230,7 +207,7 @@ export default function AdminLoginModal({ isOpen, onClose, onLoginSuccess }) {
               <div className="relative">
                 <input
                   type="password"
-                  disabled={isGeoBlocked || lockoutInfo.isLocked || isVerifying || geoChecking}
+                  disabled={!isAuthorized || lockoutInfo.isLocked || isVerifying || isCheckingSecurity}
                   value={pin}
                   onChange={(e) => { setPin(e.target.value); setError(''); }}
                   placeholder="••••"
@@ -244,7 +221,7 @@ export default function AdminLoginModal({ isOpen, onClose, onLoginSuccess }) {
 
             <button
               type="submit"
-              disabled={isGeoBlocked || lockoutInfo.isLocked || isVerifying || geoChecking}
+              disabled={!isAuthorized || lockoutInfo.isLocked || isVerifying || isCheckingSecurity}
               className="w-full bg-brand-orange hover:bg-brand-orange-hover text-white py-3.5 rounded-xl font-extrabold text-sm shadow-lg hover:shadow-glow transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {isVerifying ? (
@@ -252,19 +229,19 @@ export default function AdminLoginModal({ isOpen, onClose, onLoginSuccess }) {
               ) : (
                 <>
                   <ShieldCheck className="w-4 h-4" />
-                  <span>Valider l'authentification (Algérie 🇩🇿)</span>
+                  <span>Connexion</span>
                 </>
               )}
             </button>
 
-            {!isGeoBlocked && (
+            {isAuthorized && (
               <button
                 type="button"
                 disabled={lockoutInfo.isLocked}
                 onClick={() => { setIsChangingPin(true); setError(''); }}
                 className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 underline block mx-auto pt-2"
               >
-                Modifier le code PIN Administrateur
+                Modifier le code PIN
               </button>
             )}
           </form>
@@ -276,7 +253,6 @@ export default function AdminLoginModal({ isOpen, onClose, onLoginSuccess }) {
               </label>
               <input
                 type="password"
-                disabled={isGeoBlocked}
                 value={currentPinInput}
                 onChange={(e) => setCurrentPinInput(e.target.value)}
                 placeholder="PIN actuel"
@@ -286,14 +262,13 @@ export default function AdminLoginModal({ isOpen, onClose, onLoginSuccess }) {
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Nouveau Code PIN (Min. 4 chiffres)
+                Nouveau Code PIN
               </label>
               <input
                 type="password"
-                disabled={isGeoBlocked}
                 value={newPinInput}
                 onChange={(e) => setNewPinInput(e.target.value)}
-                placeholder="Nouveau PIN secret"
+                placeholder="Nouveau PIN"
                 className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-brand-orange focus:outline-none"
               />
             </div>
@@ -308,10 +283,10 @@ export default function AdminLoginModal({ isOpen, onClose, onLoginSuccess }) {
               </button>
               <button
                 type="submit"
-                disabled={isVerifying || isGeoBlocked}
+                disabled={isVerifying}
                 className="flex-1 bg-brand-orange hover:bg-brand-orange-hover text-white py-2.5 rounded-xl font-bold text-xs shadow disabled:opacity-50"
               >
-                {isVerifying ? 'Hachage...' : 'Enregistrer PIN'}
+                {isVerifying ? 'Enregistrement...' : 'Enregistrer'}
               </button>
             </div>
           </form>
