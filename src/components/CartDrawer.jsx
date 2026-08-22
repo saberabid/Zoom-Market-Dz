@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   ShoppingBag, 
@@ -7,21 +7,29 @@ import {
   Minus, 
   Truck, 
   Send, 
-  MessageSquare,
-  AlertCircle,
-  MapPin,
-  User,
-  Phone,
-  ArrowRight,
-  ArrowLeft,
-  ShieldCheck,
-  CheckCircle2
+  MessageSquare, 
+  AlertCircle, 
+  MapPin, 
+  User, 
+  Phone, 
+  ArrowRight, 
+  ArrowLeft, 
+  ShieldCheck, 
+  CheckCircle2,
+  ShieldAlert
 } from 'lucide-react';
 import { WILAYAS } from '../data/wilayas';
 import { formatPrice, validateDZPhone } from '../utils/formatters';
 import { sendOrderNotification, generateWhatsAppOrderUrl } from '../utils/email';
 import { TRANSLATIONS } from '../data/translations';
 import { addOrderToStorage } from '../utils/storage';
+import { 
+  sanitizeText, 
+  sanitizePhone, 
+  verifyHumanSubmission, 
+  checkOrderRateLimit, 
+  recordOrderTimestamp 
+} from '../utils/sanitizer';
 
 export default function CartDrawer({
   isOpen,
@@ -45,8 +53,20 @@ export default function CartDrawer({
   const [address, setAddress] = useState('');
   const [notes, setNotes] = useState('');
   
+  // Security Honeypot & Timestamp
+  const [honeypotTrap, setHoneypotTrap] = useState('');
+  const [formOpenedAt, setFormOpenedAt] = useState(() => Date.now());
+
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [securityError, setSecurityError] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      setFormOpenedAt(Date.now());
+      setSecurityError('');
+    }
+  }, [isOpen]);
 
   // Get current selected wilaya object
   const currentWilaya = WILAYAS.find(w => w.code === selectedWilayaCode) || WILAYAS[15];
@@ -56,18 +76,22 @@ export default function CartDrawer({
   const subtotal = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   const total = subtotal + shippingFee;
 
-  // Validate form fields for Step 2
+  // Validate form fields for Step 2 with strict Sanitization
   const validateForm = () => {
     const errs = {};
-    if (!fullName.trim()) {
+    const cleanName = sanitizeText(fullName, 100);
+    const cleanPhone = sanitizePhone(phone);
+    const cleanAddress = sanitizeText(address, 250);
+
+    if (!cleanName) {
       errs.fullName = lang === 'ar' ? 'يرجى كتابة الاسم واللقب' : 'Le nom et prénom sont obligatoires.';
     }
-    if (!phone.trim()) {
+    if (!cleanPhone) {
       errs.phone = lang === 'ar' ? 'رقم الهاتف مطلوب لتأكيد الطلب' : 'Le numéro de téléphone est obligatoire.';
-    } else if (!validateDZPhone(phone)) {
+    } else if (!validateDZPhone(cleanPhone)) {
       errs.phone = lang === 'ar' ? 'رقم غير صحيح (05/06/07 + 8 أرقام)' : 'Numéro invalide (05, 06 ou 07 + 8 chiffres).';
     }
-    if (!address.trim()) {
+    if (!cleanAddress) {
       errs.address = lang === 'ar' ? 'يرجى تحديد البلدية والعنوان بالتفصيل' : 'La commune et adresse de livraison sont obligatoires.';
     }
 
@@ -75,22 +99,45 @@ export default function CartDrawer({
     return Object.keys(errs).length === 0;
   };
 
-  // Handle Submit Order via EmailJS / FormSubmit + Local Storage Order Recording
+  // Handle Submit Order via EmailJS / FormSubmit + Anti-Bot & Anti-Spam Security
   const handleSubmitOrder = async (e) => {
     e?.preventDefault?.();
+    setSecurityError('');
+
     if (cartItems.length === 0) return;
     if (!validateForm()) return;
 
+    // 1. Anti-Bot Honeypot & Timing Check
+    const botCheck = verifyHumanSubmission({
+      honeypotField: honeypotTrap,
+      formOpenedAt,
+      minDurationMs: 1200
+    });
+
+    if (!botCheck.isHuman) {
+      setSecurityError('Vérification de sécurité échouée. Veuillez réessayer.');
+      return;
+    }
+
+    // 2. Anti-Spam Rate Limiter Check (Max 1 order per 20 seconds)
+    const rateCheck = checkOrderRateLimit(20);
+    if (!rateCheck.allowed) {
+      setSecurityError(rateCheck.message);
+      return;
+    }
+
     setLoading(true);
 
+    const sanitizedCustomer = {
+      fullName: sanitizeText(fullName, 100),
+      phone: sanitizePhone(phone),
+      wilaya: currentWilaya.name,
+      address: sanitizeText(address, 250),
+      notes: sanitizeText(notes, 250)
+    };
+
     const orderData = {
-      customer: {
-        fullName: fullName.trim(),
-        phone: phone.trim(),
-        wilaya: currentWilaya.name,
-        address: address.trim(),
-        notes: notes.trim()
-      },
+      customer: sanitizedCustomer,
       items: cartItems,
       subtotal,
       shippingFee,
@@ -100,6 +147,7 @@ export default function CartDrawer({
 
     // Save order locally for Admin listing
     addOrderToStorage(orderData);
+    recordOrderTimestamp();
 
     try {
       await sendOrderNotification({ orderData, emailConfig });
@@ -125,15 +173,16 @@ export default function CartDrawer({
   const handleWhatsAppOrder = () => {
     if (cartItems.length === 0) return;
 
-    // If on step 1, proceed with current customer info or open directly
+    const sanitizedCustomer = {
+      fullName: sanitizeText(fullName, 100) || 'Client Zoom Market',
+      phone: sanitizePhone(phone) || 'Non renseigné',
+      wilaya: currentWilaya.name,
+      address: sanitizeText(address, 250) || 'À confirmer par WhatsApp',
+      notes: sanitizeText(notes, 250)
+    };
+
     const orderData = {
-      customer: {
-        fullName: fullName.trim() || 'Client Zoom Market',
-        phone: phone.trim() || 'Non renseigné',
-        wilaya: currentWilaya.name,
-        address: address.trim() || 'À confirmer par WhatsApp',
-        notes: notes.trim()
-      },
+      customer: sanitizedCustomer,
       items: cartItems,
       subtotal,
       shippingFee,
@@ -141,8 +190,8 @@ export default function CartDrawer({
       date: new Date().toLocaleString(lang === 'ar' ? 'ar-DZ' : 'fr-DZ')
     };
 
-    // Save order locally for Admin listing
     addOrderToStorage(orderData);
+    recordOrderTimestamp();
 
     const waUrl = generateWhatsAppOrderUrl(orderData, emailConfig.storePhone);
     window.open(waUrl, '_blank');
@@ -158,7 +207,7 @@ export default function CartDrawer({
         onClick={onClose} 
       />
 
-      {/* Drawer Container (100% width on mobile without clipping, max-w-lg on desktop) */}
+      {/* Drawer Container */}
       <div className={`fixed inset-y-0 ${lang === 'ar' ? 'left-0' : 'right-0'} w-full sm:max-w-lg bg-white dark:bg-slate-900 shadow-2xl flex flex-col justify-between z-50 overflow-hidden`}>
         
         {/* Top Header */}
@@ -220,6 +269,13 @@ export default function CartDrawer({
         {/* Drawer Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
           
+          {securityError && (
+            <div className="p-3 bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300 rounded-xl text-xs font-bold flex items-center gap-2 border border-red-200 dark:border-red-900">
+              <ShieldAlert className="w-4 h-4 flex-shrink-0" />
+              <span>{securityError}</span>
+            </div>
+          )}
+
           {cartItems.length === 0 ? (
             <div className="text-center py-16 px-4 flex flex-col items-center justify-center">
               <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-400 mb-4">
@@ -352,6 +408,21 @@ export default function CartDrawer({
                   </div>
 
                   <form onSubmit={handleSubmitOrder} className="space-y-3.5">
+                    
+                    {/* Anti-Bot Honeypot Hidden Input Field */}
+                    <div className="hidden" aria-hidden="true" style={{ display: 'none' }}>
+                      <label htmlFor="website_url_hp">Leave this field blank</label>
+                      <input
+                        type="text"
+                        id="website_url_hp"
+                        name="website_url_hp"
+                        tabIndex="-1"
+                        autoComplete="off"
+                        value={honeypotTrap}
+                        onChange={(e) => setHoneypotTrap(e.target.value)}
+                      />
+                    </div>
+
                     {/* Nom & Prénom */}
                     <div>
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -360,6 +431,7 @@ export default function CartDrawer({
                       <div className="relative">
                         <input
                           type="text"
+                          maxLength={80}
                           value={fullName}
                           onChange={(e) => setFullName(e.target.value)}
                           placeholder={t.fullNamePlaceholder}
@@ -384,6 +456,7 @@ export default function CartDrawer({
                       <div className="relative">
                         <input
                           type="tel"
+                          maxLength={20}
                           value={phone}
                           onChange={(e) => setPhone(e.target.value)}
                           placeholder={t.phonePlaceholder}
@@ -430,6 +503,7 @@ export default function CartDrawer({
                         {t.address} <span className="text-brand-orange">*</span>
                       </label>
                       <textarea
+                        maxLength={250}
                         value={address}
                         onChange={(e) => setAddress(e.target.value)}
                         rows={2}
@@ -452,6 +526,7 @@ export default function CartDrawer({
                       </label>
                       <input
                         type="text"
+                        maxLength={200}
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
                         placeholder={t.notesPlaceholder}
@@ -465,7 +540,7 @@ export default function CartDrawer({
           )}
         </div>
 
-        {/* Drawer Sticky Footer with Price Breakdown & Action CTAs */}
+        {/* Drawer Sticky Footer */}
         {cartItems.length > 0 && (
           <div className="p-4 sm:p-5 bg-slate-50 dark:bg-slate-800/90 border-t border-slate-200 dark:border-slate-800 space-y-3 flex-shrink-0 shadow-lg">
             
