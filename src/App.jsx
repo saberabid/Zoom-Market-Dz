@@ -244,7 +244,7 @@ export default function App() {
   const cartTotalItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
-    <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-brand-orange selection:text-white transition-colors duration-200 pb-20 md:pb-0">
+    <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-brand-orange selection:text-white transition-colors duration-200 pb-16 md:pb-0">
       
       {/* Top Header */}
       <Header
